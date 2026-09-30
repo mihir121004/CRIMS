@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container-fluid">
+  <div class="page-hero dark-hero">
+    <div>
+      <span class="hero-eyebrow">Case Assignment</span>
+      <h2>Assign Officer</h2>
+      <p>Case: {{ complaint.tracking_id }} — {{ complaint.title }}</p>
+    </div>
+    <div class="hero-icon">
+      <i class="bi bi-person-plus"></i>
+    </div>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header">Officer Assignment</div>
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label class="form-label">Officer</label>
+              <select name="officer" class="form-select" required>
+                <option value="">-- Select an officer --</option>
+                {% for officer in officers %}
+                <option value="{{ officer.id }}">
+                  {{ officer.username }} ({{ officer.current_case_count }} active cases)
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-primary">
+                <i class="bi bi-person-check me-1"></i> Assign Officer
+              </button>
+              <a href="{% url 'complaint_detail' complaint.id %}" class="btn btn-outline-secondary">
+                Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

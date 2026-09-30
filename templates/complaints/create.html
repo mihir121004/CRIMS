@@ -1,0 +1,162 @@
+{% extends 'base.html' %} {% block content %}
+
+{% load static %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<div class="container-fluid complaint-new">
+  <!-- PAGE HEADER -->
+  <div class="page-hero">
+    <div>
+      <span class="page-eyebrow"><i class="bi bi-flag-fill me-1"></i>File a Report</span>
+      <h2 class="fw-bold">Report a Crime</h2>
+      <p>Fill in the details below. Our AI triages your report and assigns an officer automatically.</p>
+    </div>
+    <a href="{% url 'my_complaints' %}" class="btn btn-outline-light">
+      <i class="bi bi-folder2-open me-1"></i>My Complaints
+    </a>
+  </div>
+
+  <!-- STEPS -->
+  <div class="steps-bar">
+    <div class="step active"><span class="step-num">1</span><span>Describe the incident</span></div>
+    <div class="step-line"></div>
+    <div class="step active"><span class="step-num">2</span><span>Pin the location</span></div>
+    <div class="step-line"></div>
+    <div class="step"><span class="step-num">3</span><span>Submit &amp; track</span></div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card form-card">
+        <div class="card-header"><i class="bi bi-pencil-square me-2"></i>Incident Details</div>
+        <div class="card-body">
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger py-2">
+            {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <form method="post" novalidate>
+            {% csrf_token %}
+
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.title.id_for_label }}">Complaint Title</label>
+              {{ form.title }}
+              {% for error in form.title.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.description.id_for_label }}">What Happened?</label>
+              {{ form.description }}
+              <div class="form-hint"><i class="bi bi-stars me-1"></i>AI will auto-detect the category and priority.</div>
+              {% for error in form.description.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label" for="{{ form.location.id_for_label }}">Location</label>
+                {{ form.location }}
+                {% for error in form.location.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+                {% endfor %}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label" for="{{ form.incident_date.id_for_label }}">Incident Date</label>
+                {{ form.incident_date }}
+                {% for error in form.incident_date.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label" for="{{ form.priority.id_for_label }}">Priority</label>
+              {{ form.priority }}
+              {% for error in form.priority.errors %}
+              <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+
+            {{ form.latitude }}
+            {{ form.longitude }}
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-danger btn-submit">
+                <i class="bi bi-send-fill me-2"></i>Submit Complaint
+              </button>
+              <a href="{% url 'citizen_dashboard' %}" class="btn btn-outline-light">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card form-card h-100">
+        <div class="card-header"><i class="bi bi-geo-alt-fill me-2"></i>Crime Location</div>
+        <div class="card-body">
+          <p class="map-hint">
+            <i class="bi bi-cursor-fill me-1"></i>
+            Click on the map to drop a pin where the incident happened.
+          </p>
+          <div id="map" class="crime-map"></div>
+          <div id="pinStatus" class="pin-status">
+            <i class="bi bi-pin-map me-1"></i><span>No pin dropped yet</span>
+          </div>
+          <button type="button" id="clearPin" class="btn btn-sm btn-outline-light w-100 mt-2" disabled>
+            <i class="bi bi-x-circle me-1"></i>Clear Pin
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+    var map = L.map('map').setView([23.0225, 72.5714], 12);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    var marker = null;
+    var pinStatus = document.getElementById('pinStatus');
+    var clearBtn = document.getElementById('clearPin');
+
+    function setPin(latlng) {
+        if (marker) {
+            map.removeLayer(marker);
+        }
+        marker = L.marker(latlng).addTo(map);
+        document.getElementById('id_latitude').value = latlng.lat;
+        document.getElementById('id_longitude').value = latlng.lng;
+        pinStatus.classList.add('pinned');
+        pinStatus.querySelector('span').textContent =
+            'Pinned: ' + latlng.lat.toFixed(5) + ', ' + latlng.lng.toFixed(5);
+        clearBtn.disabled = false;
+    }
+
+    map.on('click', function(e) {
+        setPin(e.latlng);
+    });
+
+    clearBtn.addEventListener('click', function() {
+        if (marker) {
+            map.removeLayer(marker);
+            marker = null;
+        }
+        document.getElementById('id_latitude').value = '';
+        document.getElementById('id_longitude').value = '';
+        pinStatus.classList.remove('pinned');
+        pinStatus.querySelector('span').textContent = 'No pin dropped yet';
+        clearBtn.disabled = true;
+    });
+</script>
+
+{% endblock %}

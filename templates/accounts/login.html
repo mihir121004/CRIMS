@@ -1,0 +1,80 @@
+{% extends 'accounts/auth_base.html' %}
+
+{% block title %}Login — CRIMS{% endblock %}
+
+{% block auth_content %}
+
+<section class="auth-page">
+    <div class="auth-card-new">
+
+        <div class="auth-logo-box">
+            <i class="bi bi-shield-lock-fill"></i>
+        </div>
+
+        <h2>Welcome Back</h2>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger py-2">
+            {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if settings.EMAIL_VERIFICATION_REQUIRED %}
+        <div class="alert alert-info py-2">
+            Your account requires email verification before login. Check your inbox for OTP.
+        </div>
+        {% endif %}
+
+        <form method="POST" novalidate>
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label class="form-label" for="{{ form.username.id_for_label }}">
+                    Username
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bi bi-person"></i>
+                    </span>
+                    {{ form.username }}
+                </div>
+                {% for error in form.username.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label" for="{{ form.password.id_for_label }}">
+                    Password
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bi bi-lock"></i>
+                    </span>
+                    {{ form.password }}
+                </div>
+                {% for error in form.password.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 mb-3 auth-btn-submit">
+                Login
+            </button>
+
+            <div class="auth-link-row">
+                <a href="{% url 'forgot_password' %}" class="btn btn-outline-primary">
+                    Forgot Password?
+                </a>
+                <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+                    Back to Home
+                </a>
+            </div>
+        </form>
+
+    </div>
+</section>
+
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends 'accounts/auth_base.html' %}
+
+{% block title %}Verify Email — CRIMS{% endblock %}
+
+{% block auth_content %}
+
+<section class="auth-page">
+    <div class="auth-card-new">
+
+        <div class="auth-logo-box mx-auto mb-3">
+            <i class="bi bi-envelope-check"></i>
+        </div>
+
+        <h2>Verify Your Email</h2>
+
+        <p class="text-secondary text-center mb-4">
+            Enter the 6-digit OTP we sent to <strong>{{ user.email }}</strong>.
+        </p>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger py-2">
+            {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="POST" novalidate>
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label class="form-label" for="{{ form.otp.id_for_label }}">
+                    OTP Code
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bi bi-shield-lock"></i>
+                    </span>
+                    {{ form.otp }}
+                </div>
+                {% for error in form.otp.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 mb-3 auth-btn-submit">
+                <i class="bi bi-check-circle me-1"></i>
+                Verify Account
+            </button>
+
+            <div class="auth-link-row auth-link-single">
+                <a href="{% url 'login' %}" class="btn btn-outline-secondary w-100">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Login
+                </a>
+            </div>
+        </form>
+
+        <p class="text-center text-secondary small mt-4 mb-0">
+            &copy; 2026 CRIMS | Crime Reporting &amp; Investigation Management System
+        </p>
+
+    </div>
+</section>
+
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container-fluid investigation-detail">
+  <div class="page-hero dark-hero">
+    <div>
+      <span class="hero-eyebrow">Investigation</span>
+      <h2>Case {{ investigation.complaint.tracking_id }}</h2>
+      <p>{{ investigation.complaint.title }}</p>
+    </div>
+    <div class="hero-icon">
+      <i class="bi bi-search"></i>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>Investigation Details</span>
+          <span class="badge bg-primary fs-6">{{ investigation.complaint.status }}</span>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-8">
+              <p>
+                <strong>Complaint:</strong>
+                <a href="{% url 'complaint_detail' investigation.complaint.id %}">
+                  {{ investigation.complaint.title }}
+                </a>
+              </p>
+              <p>
+                <strong>Category:</strong> {{ investigation.complaint.category }}
+                &nbsp;|&nbsp;
+                <strong>Priority:</strong> {{ investigation.complaint.priority }}
+              </p>
+              <p>
+                <strong>Assigned Officer:</strong>
+                {{ investigation.assigned_officer|default:"Not assigned yet" }}
+              </p>
+              <p>
+                <strong>Started:</strong> {{ investigation.started_at|date:"d M Y H:i" }}
+                &nbsp;|&nbsp;
+                <strong>Last Updated:</strong> {{ investigation.updated_at|date:"d M Y H:i" }}
+              </p>
+            </div>
+            <div class="col-md-4 text-end">
+              {% if request.user.role == 'admin' %}
+              <a href="{% url 'assign_officer' investigation.complaint.id %}" class="btn btn-warning mb-2">
+                <i class="bi bi-person-plus"></i>
+                Reassign Officer
+              </a>
+              <br>
+              {% endif %}
+              <a href="{% url 'complaint_detail' investigation.complaint.id %}" class="btn btn-outline-secondary">
+                View Case
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-4">
+    <div class="card-header">Investigation Timeline</div>
+    <div class="card-body">
+      {% if request.user.role == 'officer' or request.user.role == 'admin' %}
+      <form method="post" action="{% url 'add_note' investigation.pk %}" class="mb-3">
+        {% csrf_token %}
+        <div class="input-group">
+          <input type="text" name="note" placeholder="Add investigation note..." class="form-control" required>
+          <button class="btn btn-primary">Add Note</button>
+        </div>
+      </form>
+      {% endif %}
+
+      {% for note in timeline %}
+      <div class="timeline-item">
+        <strong>{{ note.officer.username }}</strong>
+        <br>
+        <small class="text-secondary">{{ note.created_at }}</small>
+        <p class="mt-2 mb-0">{{ note.note }}</p>
+      </div>
+      <hr>
+      {% empty %}
+      <p class="text-secondary">No notes recorded yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

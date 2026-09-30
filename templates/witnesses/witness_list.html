@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="witnesses">
+
+    <!-- PAGE HERO -->
+    <div class="page-hero wp-hero">
+        <div>
+            <span class="hero-eyebrow">Witness Records</span>
+            <h2>Witnesses</h2>
+            <p>Track witnesses linked to cases, their protection status and statements.</p>
+        </div>
+        <a href="{% url 'witness_create' %}" class="btn btn-light">
+            <i class="bi bi-person-plus me-1"></i> Add Witness
+        </a>
+    </div>
+
+    <!-- QUICK STATS -->
+    <div class="row g-4 wp-stats-row">
+        <div class="col-6 col-lg-3">
+            <div class="stat-card stat-total">
+                <div class="stat-icon"><i class="bi bi-people"></i></div>
+                <div>
+                    <h3 class="counter">{{ total_count }}</h3>
+                    <p>Total Witnesses</p>
+                </div>
+                <a href="{% url 'witness_list' %}" class="stat-link">
+                    View all <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="stat-card stat-card-protected">
+                <div class="stat-icon"><i class="bi bi-shield-lock-fill"></i></div>
+                <div>
+                    <h3 class="counter">{{ protected_count }}</h3>
+                    <p>Protected</p>
+                </div>
+                <a href="?status=protected" class="stat-link">
+                    Review protected <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="stat-card stat-success">
+                <div class="stat-icon"><i class="bi bi-person"></i></div>
+                <div>
+                    <h3 class="counter">{{ standard_count }}</h3>
+                    <p>Standard</p>
+                </div>
+                <a href="?status=standard" class="stat-link">
+                    View standard <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="stat-card stat-primary">
+                <div class="stat-icon"><i class="bi bi-chat-left-text"></i></div>
+                <div>
+                    <h3 class="counter">{{ result_count }}</h3>
+                    <p>Results</p>
+                </div>
+                <a href="{% url 'witness_list' %}" class="stat-link">
+                    Refresh <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEARCH & FILTERS -->
+    <div class="card filter-card wp-filters">
+        <form method="get">
+            <div class="row g-3">
+                <div class="col-lg-5 col-md-6">
+                    <label class="form-label">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" name="search" placeholder="Name or protection status…" value="{{ search }}" class="form-control">
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All statuses</option>
+                        <option value="protected" {% if request.GET.status == 'protected' %}selected{% endif %}>Protected</option>
+                        <option value="standard" {% if request.GET.status == 'standard' %}selected{% endif %}>Standard</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-1 col-md-4">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100 filter-submit" title="Apply filters">
+                        <i class="bi bi-funnel"></i>
+                    </button>
+                </div>
+            </div>
+
+            {% if has_filters %}
+            <div class="filter-actions">
+                <a href="{% url 'witness_list' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x-circle me-1"></i> Clear Filters
+                </a>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- RESULTS BAR -->
+    <div class="results-bar">
+        <span class="results-count">
+            <i class="bi bi-person-video3 me-1"></i>
+            {{ result_count }} witness{{ result_count|pluralize }} found
+        </span>
+        {% if has_filters %}
+        <span class="results-filtered">
+            <i class="bi bi-funnel-fill me-1"></i> Filtered view
+        </span>
+        {% endif %}
+    </div>
+
+    <!-- WITNESS REGISTER -->
+    <div class="card table-card section-card">
+        <div class="section-card-header">
+            <span><i class="bi bi-person-video3 me-2"></i> Witness Register</span>
+            <span class="badge bg-primary">{{ result_count }}</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table wp-table mb-0 table-hover">
+                <thead class="wp-table-head">
+                    <tr>
+                        <th>Witness</th>
+                        <th>Status</th>
+                        <th>Added</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="wp-table-body">
+                    {% for witness in witnesses %}
+                    <tr class="wp-row {% if witness.protected_witness %}wp-row-protected{% endif %}">
+                        <td data-label="Witness">
+                            <div class="wp-cell">
+                                <div class="wp-avatar">
+                                    <i class="bi bi-person-video3"></i>
+                                </div>
+                                <div class="wp-cell-info">
+                                    <span class="wp-name">{{ witness.full_name }}</span>
+                                    <span class="wp-sub">
+                                        <i class="bi bi-person"></i>
+                                        {{ witness.age }} yrs
+                                    </span>
+                                </div>
+                            </div>
+                        </td>
+                        <td data-label="Status" class="wp-status-cell">
+                            {% if witness.protected_witness %}
+                                <span class="wp-protected-chip"><i class="bi bi-shield-lock-fill me-1"></i>Protected</span>
+                            {% else %}
+                                <span class="wp-standard-chip"><i class="bi bi-person me-1"></i>Standard</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="Added" class="date-cell">
+                            <span class="date-main">{{ witness.created_at|date:"d M Y" }}</span>
+                            <span class="date-sub">{{ witness.created_at|timesince }} ago</span>
+                        </td>
+                        <td class="text-end action-cell" data-label="Action">
+                            <a href="{% url 'witness_detail' witness.id %}" class="btn btn-sm btn-primary action-btn" title="View witness">
+                                <i class="bi bi-eye"></i><span>View</span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr class="wp-empty-row">
+                        <td colspan="4">
+                            <div class="wp-empty">
+                                <i class="bi bi-person-video3"></i>
+                                <h5>No witnesses on file</h5>
+                                <p>Add a witness from the Add Witness button, or adjust your search.</p>
+                                <a href="{% url 'witness_create' %}" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-person-plus me-1"></i> Add Witness
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

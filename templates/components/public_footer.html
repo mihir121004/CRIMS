@@ -1,0 +1,82 @@
+<footer class="public-footer">
+    <div class="container py-5">
+        <div class="row g-4">
+
+            <!-- Brand + Description -->
+            <div class="col-lg-4">
+                <a href="{% url 'home' %}" class="public-footer-brand">
+                    <span class="logo-box logo-box-sm">
+                        <i class="bi bi-shield-lock-fill"></i>
+                    </span>
+                    <span class="fw-bold text-white">CRIMS</span>
+                </a>
+                <p class="public-footer-desc">
+                    Crime Reporting & Investigation Management System.
+                    Protecting communities through digital crime management.
+                </p>
+                <div class="d-flex gap-3 mt-3">
+                    <a href="#" class="public-footer-social"><i class="bi bi-twitter-x"></i></a>
+                    <a href="#" class="public-footer-social"><i class="bi bi-linkedin"></i></a>
+                    <a href="#" class="public-footer-social"><i class="bi bi-github"></i></a>
+                </div>
+            </div>
+
+            <!-- Quick Links -->
+            <div class="col-lg-2">
+                <h4 class="public-footer-title">Quick Links</h4>
+                <ul class="list-unstyled">
+                    <li><a href="{% url 'home' %}" class="public-footer-link">Home</a></li>
+                    <li><a href="#about" class="public-footer-link">About</a></li>
+                    <li><a href="{% url 'login' %}" class="public-footer-link">Login</a></li>
+                    <li><a href="{% url 'register' %}" class="public-footer-link">Register</a></li>
+                    <li><a href="#emergency" class="public-footer-link">Emergency</a></li>
+                </ul>
+            </div>
+
+            <!-- Services -->
+            <div class="col-lg-3">
+                <h4 class="public-footer-title">Services</h4>
+                <ul class="list-unstyled">
+                    <li><a href="{% url 'login' %}" class="public-footer-link">Crime Reporting</a></li>
+                    <li><a href="{% url 'login' %}" class="public-footer-link">Case Tracking</a></li>
+                    <li><a href="{% url 'login' %}" class="public-footer-link">Investigation</a></li>
+                    <li><a href="{% url 'login' %}" class="public-footer-link">Evidence Upload</a></li>
+                </ul>
+            </div>
+
+            <!-- Emergency Contact -->
+            <div class="col-lg-3">
+                <h4 class="public-footer-title">Emergency Contact</h4>
+                <div class="public-footer-emergency">
+                    <div class="emergency-item">
+                        <i class="bi bi-telephone-fill emergency-icon"></i>
+                        <div>
+                            <strong>Police Helpline</strong>
+                            <div class="text-secondary">100</div>
+                        </div>
+                    </div>
+                    <div class="emergency-item mt-3">
+                        <i class="bi bi-envelope-fill emergency-icon"></i>
+                        <div>
+                            <strong>Email</strong>
+                            <div class="text-secondary">emergency@crims.gov</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="public-footer-bottom">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                <p class="mb-0 text-secondary small">
+                    © 2026 CRIMS | Crime Reporting & Investigation Management System
+                </p>
+                <div class="d-flex gap-4 small">
+                    <a href="#" class="public-footer-bottom-link">Privacy Policy</a>
+                    <a href="#" class="public-footer-bottom-link">Terms of Service</a>
+                    <a href="#" class="public-footer-bottom-link">Contact Us</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>

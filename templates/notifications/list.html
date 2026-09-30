@@ -1,0 +1,164 @@
+{% extends 'base.html' %} {% block content %}
+
+<div class="notif-page">
+
+    <div class="page-hero notif-hero">
+        <div>
+            <span class="hero-eyebrow">Alerts & Updates</span>
+            <h2>Notification Center</h2>
+            <p>Real-time alerts and system notifications.</p>
+        </div>
+        {% if unread_count %}
+        <span class="badge notif-unread-pill">{{ unread_count }} Unread</span>
+        {% else %}
+        <span class="badge notif-clear-pill"><i class="bi bi-check-all me-1"></i>All caught up</span>
+        {% endif %}
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6 col-xl-3">
+            <div class="card stat-card">
+                <div class="stat-icon stat-icon-blue"><i class="bi bi-bell-fill"></i></div>
+                <div>
+                    <div class="stat-value">{{ total_notifications }}</div>
+                    <div class="stat-label">Total Notifications</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="card stat-card stat-card-danger">
+                <div class="stat-icon stat-icon-red"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                <div>
+                    <div class="stat-value">{{ unread_count }}</div>
+                    <div class="stat-label">Unread</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="card stat-card stat-card-success">
+                <div class="stat-icon stat-icon-green"><i class="bi bi-check-circle-fill"></i></div>
+                <div>
+                    <div class="stat-value">{{ read_notifications }}</div>
+                    <div class="stat-label">Read</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="card stat-card stat-card-info">
+                <div class="stat-icon stat-icon-teal"><i class="bi bi-clock-history"></i></div>
+                <div>
+                    <div class="stat-value">{{ activities|length }}</div>
+                    <div class="stat-label">Recent Activities</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card notif-list-card">
+        <div class="notif-list-head">
+            <h5><i class="bi bi-bell me-2"></i>Recent Notifications</h5>
+            {% if unread_count %}
+            <span class="results-count">{{ unread_count }} unread</span>
+            {% endif %}
+        </div>
+        <div class="notif-list">
+    {% for notification in notifications %}
+    <div class="notification-item {% if not notification.is_read %}is-unread{% endif %}">
+      <div class="notif-icon-wrap">
+        <i class="bi bi-bell-fill"></i>
+      </div>
+      <div class="notification-content">
+        <h6>
+          {{ notification.title }}
+          {% if not notification.is_read %}
+          <span class="badge notif-new-dot">New</span>
+          {% endif %}
+        </h6>
+        <p>{{ notification.message }}</p>
+        <small><i class="bi bi-clock me-1"></i>{{ notification.created_at|date:"d M Y, H:i" }}</small>
+      </div>
+      <div class="notif-action">
+        {% if not notification.is_read %}
+        <form method="post" action="{% url 'mark_read' notification.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-check me-1"></i>Mark as read
+          </button>
+        </form>
+        {% else %}
+        <span class="notif-read-tick"><i class="bi bi-check-all"></i></span>
+        {% endif %}
+      </div>
+    </div>
+    {% empty %}
+    <div class="cases-empty">
+      <i class="bi bi-bell-slash"></i>
+      <h5>No notifications yet</h5>
+      <p>Case updates and system alerts will appear here.</p>
+    </div>
+    {% endfor %}
+        </div>
+    </div>
+
+<div class="row g-3 mt-1">
+  <div class="col-lg-6">
+    <div class="card notif-side-card">
+      <div class="notif-list-head">
+        <h5><i class="bi bi-exclamation-octagon me-2"></i>Unread Alerts</h5>
+        {% if priority_alerts %}
+        <span class="results-count">{{ priority_alerts|length }} active</span>
+        {% endif %}
+      </div>
+      <div class="notif-alert-list">
+    {% for alert in priority_alerts %}
+
+    <div class="alert notif-alert-box">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <div>
+        <strong>{{ alert.title }}</strong>
+        <span>{{ alert.message }}</span>
+      </div>
+    </div>
+    {% empty %}
+    <div class="cases-empty cases-empty-sm">
+      <i class="bi bi-shield-check"></i>
+      <h5>No unread alerts</h5>
+      <p>You are all caught up.</p>
+    </div>
+
+    {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card notif-side-card">
+      <div class="notif-list-head">
+        <h5><i class="bi bi-activity me-2"></i>Recent Activity</h5>
+      </div>
+      <div class="notif-timeline">
+    {% for activity in activities %}
+    <div class="timeline-item">
+      <div class="timeline-dot"></div>
+      <div>
+        <strong>{{ activity.user }}</strong>
+        <span>{{ activity.action }}</span>
+        <br />
+        <small><i class="bi bi-clock me-1"></i>{{ activity.created_at|date:"d M Y, H:i" }}</small>
+      </div>
+    </div>
+    {% empty %}
+    <div class="cases-empty cases-empty-sm">
+      <i class="bi bi-clock-history"></i>
+      <h5>No recent activity</h5>
+      <p>Your actions will show up here.</p>
+    </div>
+    {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+{% endblock %}

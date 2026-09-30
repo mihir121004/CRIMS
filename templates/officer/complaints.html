@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="officer-complaints">
+
+    <!-- PAGE HERO -->
+    <div class="page-hero comp-hero">
+        <div class="comp-hero-text">
+            <span class="hero-eyebrow">Case Management</span>
+            <h2>All Complaints</h2>
+            <p>Browse, search and manage every reported complaint from one command view.</p>
+            <div class="comp-actions">
+                <a href="{% url 'officer_dashboard' %}" class="btn btn-light">
+                    <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                </a>
+                <a href="{% url 'investigation_list' %}" class="btn btn-outline-light">
+                    <i class="bi bi-search me-1"></i> Investigations
+                </a>
+            </div>
+        </div>
+        <div class="comp-hero-icon">
+            <i class="bi bi-folder2-open"></i>
+        </div>
+    </div>
+
+    <!-- QUICK STATS -->
+    <div class="row g-4 comp-stats-row">
+        <div class="col-6 col-lg-4 col-xl">
+            <div class="stat-card stat-total">
+                <div class="stat-icon"><i class="bi bi-collection"></i></div>
+                <div>
+                    <h3 class="counter">{{ total_count }}</h3>
+                    <p>Total Cases</p>
+                </div>
+                <a href="{% url 'officer_complaints' %}" class="stat-link">
+                    View all <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-4 col-xl">
+            <div class="stat-card stat-warning">
+                <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
+                <div>
+                    <h3 class="counter">{{ pending_count }}</h3>
+                    <p>Pending</p>
+                </div>
+                <a href="?status=pending" class="stat-link">
+                    View pending <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-4 col-xl">
+            <div class="stat-card stat-primary">
+                <div class="stat-icon"><i class="bi bi-search"></i></div>
+                <div>
+                    <h3 class="counter">{{ investigating_count }}</h3>
+                    <p>Investigating</p>
+                </div>
+                <a href="?status=investigation" class="stat-link">
+                    Track cases <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-4 col-xl">
+            <div class="stat-card stat-success">
+                <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
+                <div>
+                    <h3 class="counter">{{ resolved_count }}</h3>
+                    <p>Resolved</p>
+                </div>
+                <a href="?status=resolved" class="stat-link">
+                    View resolved <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-4 col-xl">
+            <div class="stat-card stat-card-danger">
+                <div class="stat-icon"><i class="bi bi-exclamation-triangle"></i></div>
+                <div>
+                    <h3 class="counter">{{ high_priority_count }}</h3>
+                    <p>High Priority</p>
+                </div>
+                <a href="?priority=High" class="stat-link">
+                    Review urgent <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEARCH & FILTERS -->
+    <div class="card filter-card comp-filters">
+        <form method="get">
+            <div class="row g-3">
+                <div class="col-lg-4 col-md-6">
+                    <label class="form-label">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" name="search" placeholder="Tracking ID, title, citizen or location…" value="{{ request.GET.search }}" class="form-control">
+                    </div>
+                </div>
+
+                <div class="col-lg-2 col-md-6">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All statuses</option>
+                        <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="review" {% if request.GET.status == 'review' %}selected{% endif %}>Under Review</option>
+                        <option value="investigation" {% if request.GET.status == 'investigation' %}selected{% endif %}>Investigation</option>
+                        <option value="evidence" {% if request.GET.status == 'evidence' %}selected{% endif %}>Evidence</option>
+                        <option value="resolved" {% if request.GET.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-2 col-md-4">
+                    <label class="form-label">Priority</label>
+                    <select name="priority" class="form-select">
+                        <option value="">All priorities</option>
+                        <option value="High" {% if request.GET.priority == 'High' %}selected{% endif %}>High</option>
+                        <option value="Medium" {% if request.GET.priority == 'Medium' %}selected{% endif %}>Medium</option>
+                        <option value="Low" {% if request.GET.priority == 'Low' %}selected{% endif %}>Low</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-2 col-md-4">
+                    <label class="form-label">Category</label>
+                    <select name="category" class="form-select">
+                        <option value="">All categories</option>
+                        <option value="theft" {% if request.GET.category == 'theft' %}selected{% endif %}>Theft</option>
+                        <option value="cybercrime" {% if request.GET.category == 'cybercrime' %}selected{% endif %}>Cyber Crime</option>
+                        <option value="fraud" {% if request.GET.category == 'fraud' %}selected{% endif %}>Fraud</option>
+                        <option value="assault" {% if request.GET.category == 'assault' %}selected{% endif %}>Assault</option>
+                        <option value="other" {% if request.GET.category == 'other' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-2 col-md-4">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100 filter-submit">
+                        <i class="bi bi-funnel me-1"></i> Filter
+                    </button>
+                </div>
+            </div>
+
+            {% if has_filters %}
+            <div class="filter-actions">
+                <a href="{% url 'officer_complaints' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle me-1"></i> Clear Filters
+                </a>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- RESULTS BAR -->
+    <div class="results-bar">
+        <span class="results-count">
+            <i class="bi bi-folder2-open me-1"></i>
+            {{ result_count }} case{{ result_count|pluralize }} found
+        </span>
+        {% if has_filters %}
+        <span class="results-filtered">
+            <i class="bi bi-funnel-fill me-1"></i> Filtered view
+        </span>
+        {% endif %}
+    </div>
+
+    <!-- TABLE CARD -->
+    <div class="card table-card section-card">
+        <div class="section-card-header">
+            <span><i class="bi bi-journal-text me-2"></i>Complaint Register</span>
+            <span class="badge bg-primary">{{ result_count }} case{{ result_count|pluralize }}</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table comp-table">
+                <thead>
+                    <tr>
+                        <th>Tracking ID</th>
+                        <th>Case Details</th>
+                        <th>Citizen</th>
+                        <th>Category</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Filed On</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for complaint in complaints %}
+                    <tr class="comp-row priority-row-{{ complaint.priority|lower }}">
+                        <td data-label="Tracking ID">
+                            <span class="tracking-pill">
+                                <i class="bi bi-hash"></i>{{ complaint.tracking_id }}
+                            </span>
+                        </td>
+                        <td class="title-cell" data-label="Case">
+                            <span class="case-title">{{ complaint.title }}</span>
+                            {% if complaint.location %}
+                            <span class="case-meta"><i class="bi bi-geo-alt me-1"></i>{{ complaint.location }}</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="Citizen">
+                            <div class="citizen-cell">
+                                <span class="citizen-avatar">{{ complaint.citizen.username|first|upper }}</span>
+                                <span class="citizen-name">{{ complaint.citizen.get_full_name|default:complaint.citizen.username }}</span>
+                            </div>
+                        </td>
+                        <td data-label="Category">
+                            <span class="cat-chip">
+                                <i class="bi bi-tag me-1"></i>{{ complaint.get_category_display|default:complaint.category|title }}
+                            </span>
+                        </td>
+                        <td data-label="Priority">
+                            {% if complaint.priority == 'High' %}
+                            <span class="badge badge-priority-high"><i class="bi bi-arrow-up-circle me-1"></i>High</span>
+                            {% elif complaint.priority == 'Low' %}
+                            <span class="badge badge-priority-low"><i class="bi bi-arrow-down-circle me-1"></i>Low</span>
+                            {% else %}
+                            <span class="badge badge-priority-medium"><i class="bi bi-dash-circle me-1"></i>Medium</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="Status">
+                            {% if complaint.status == 'pending' %}
+                            <span class="badge badge-status-pending"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
+                            {% elif complaint.status == 'resolved' %}
+                            <span class="badge badge-status-resolved"><i class="bi bi-check-circle me-1"></i>Resolved</span>
+                            {% elif complaint.status == 'review' %}
+                            <span class="badge badge-status-review"><i class="bi bi-eye me-1"></i>Under Review</span>
+                            {% elif complaint.status == 'investigation' %}
+                            <span class="badge badge-status-investigation"><i class="bi bi-search me-1"></i>Investigating</span>
+                            {% elif complaint.status == 'evidence' %}
+                            <span class="badge badge-status-evidence"><i class="bi bi-folder-check me-1"></i>Evidence</span>
+                            {% else %}
+                            <span class="badge badge-status-review">{{ complaint.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="date-cell" data-label="Filed On">
+                            <span class="date-main">{{ complaint.created_at|date:"d M Y" }}</span>
+                            <span class="date-sub">{{ complaint.created_at|timesince }} ago</span>
+                        </td>
+                        <td class="text-end action-cell" data-label="Action">
+                            <a href="{% url 'complaint_detail' complaint.id %}" class="btn btn-sm btn-primary action-btn" title="View full case">
+                                <i class="bi bi-eye"></i><span>View</span>
+                            </a>
+                            <a href="{% url 'update_status' complaint.id %}" class="btn btn-sm btn-outline-light action-btn" title="Update case status">
+                                <i class="bi bi-pencil"></i><span>Update</span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr class="comp-empty-row">
+                        <td colspan="8">
+                            <div class="cases-empty">
+                                <i class="bi bi-inbox"></i>
+                                <h5>No complaints found</h5>
+                                <p>Try adjusting your search or filters to widen the results.</p>
+                                <a href="{% url 'officer_complaints' %}" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-x-circle me-1"></i> Clear Filters
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

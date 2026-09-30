@@ -1,0 +1,13 @@
+.env
+media/
+__pycache__/
+*.pyc
+.kilo/
+env/
+smoke_tests.py
+CRIMS_source_code.md
+audit.json
+contrast_audit.json
+ui_audit.json
+.vercel
+migrations_backup/

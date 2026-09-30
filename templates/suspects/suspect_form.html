@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container-fluid suspects">
+
+  <div class="page-hero sp-hero">
+    <div class="sp-hero-text">
+      <span class="hero-eyebrow">Suspect Record</span>
+      <h2>{% if form.instance.pk %}Edit Suspect{% else %}Add New Suspect{% endif %}</h2>
+      <p>{% if form.instance.pk %}Update suspect information.{% else %}Enter suspect details to create a new record.{% endif %}</p>
+    </div>
+    <div class="hero-icon">
+      <i class="bi bi-person-plus"></i>
+    </div>
+  </div>
+
+  <div class="card form-card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>
+        <i class="bi bi-person-circle me-2"></i>
+        {% if form.instance.pk %}Edit Suspect{% else %}Add Suspect{% endif %}
+      </span>
+      <a href="{% url 'suspect_list' %}" class="btn btn-light btn-sm">
+        <i class="bi bi-arrow-left"></i> Back
+      </a>
+    </div>
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- Full Name -->
+        <div class="mb-3">
+          <label class="form-label">
+            <i class="bi bi-person me-1"></i> Full Name
+          </label>
+          {{ form.full_name }}
+          {% if form.full_name.errors %}
+          <div class="text-danger small mt-1">
+            <i class="bi bi-exclamation-circle-fill me-1"></i>{{ form.full_name.errors.0 }}
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Age & Gender row -->
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">
+              <i class="bi bi-calendar3 me-1"></i> Age
+            </label>
+            {{ form.age }}
+            {% if form.age.errors %}
+            <div class="text-danger small mt-1">
+              <i class="bi bi-exclamation-circle-fill me-1"></i>{{ form.age.errors.0 }}
+            </div>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">
+              <i class="bi bi-gender-male me-1"></i> Gender
+            </label>
+            {{ form.gender }}
+          </div>
+        </div>
+
+        <!-- Complaint -->
+        <div class="mb-3">
+          <label class="form-label">
+            <i class="bi bi-folder2-open me-1"></i> Linked Complaint
+          </label>
+          {{ form.complaint }}
+          {% if form.complaint.errors %}
+          <div class="text-danger small mt-1">
+            <i class="bi bi-exclamation-circle-fill me-1"></i>{{ form.complaint.errors.0 }}
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Phone & Aadhaar row -->
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">
+              <i class="bi bi-telephone me-1"></i> Phone
+            </label>
+            {{ form.phone }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">
+              <i class="bi bi-credit-card-2-front me-1"></i> Aadhaar Number
+            </label>
+            {{ form.aadhaar_number }}
+          </div>
+        </div>
+
+        <!-- Address -->
+        <div class="mb-3">
+          <label class="form-label">
+            <i class="bi bi-geo-alt me-1"></i> Address
+          </label>
+          {{ form.address }}
+        </div>
+
+        <!-- Photo -->
+        <div class="mb-3">
+          <label class="form-label">
+            <i class="bi bi-image me-1"></i> Photo
+          </label>
+          {{ form.photo }}
+          {% if form.photo.errors %}
+          <div class="text-danger small mt-1">
+            <i class="bi bi-exclamation-circle-fill me-1"></i>{{ form.photo.errors.0 }}
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Wanted -->
+        <div class="mb-3 form-check">
+          <input type="checkbox" name="wanted" value="True" id="wanted" {% if form.wanted.value %}checked{% endif %} class="form-check-input">
+          <label class="form-label" for="wanted">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i> Wanted
+          </label>
+        </div>
+
+        <!-- Criminal History -->
+        <div class="mb-3">
+          <label class="form-label">
+            <i class="bi bi-clipboard-data me-1"></i> Criminal History
+          </label>
+          {{ form.criminal_history }}
+          {% if form.criminal_history.errors %}
+          <div class="text-danger small mt-1">
+            <i class="bi bi-exclamation-circle-fill me-1"></i>{{ form.criminal_history.errors.0 }}
+          </div>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+    <div class="card-footer bg-transparent border-top">
+      <div class="d-flex gap-2 justify-content-end">
+        <a href="{% url 'suspect_list' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-x-lg"></i> Cancel
+        </a>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check2-circle me-1"></i> Save Suspect
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

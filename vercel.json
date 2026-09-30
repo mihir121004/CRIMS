@@ -1,0 +1,16 @@
+{
+  "builds": [
+    {
+      "src": "crims/wsgi.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "250mb",
+        "runtime": "python3.x",
+        "includeFiles": ["templates/**", "staticfiles/**"]
+      }
+    }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "crims/wsgi.py" }
+  ]
+}

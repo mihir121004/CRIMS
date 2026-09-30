@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="dashboard-header">
+  <div>
+    <h2 class="fw-bold">Evidence Management Center</h2>
+    <p class="text-secondary">Upload, verify and track digital evidence.</p>
+  </div>
+
+  <div>
+    <span class="badge bg-danger fs-6"> Secure Evidence Vault </span>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-md-4">
+    <div class="dashboard-card">
+      <i class="bi bi-folder-fill card-icon"></i>
+      <h3>{{ total_evidence }}</h3>
+      <p>Total Evidence</p>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="dashboard-card warning">
+      <i class="bi bi-arrow-left-right card-icon"></i>
+      <h3>{{ transfers_count }}</h3>
+      <p>Custody Transfers</p>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="dashboard-card primary">
+      <i class="bi bi-geo card-icon"></i>
+      <h3>{{ chain_locations }}</h3>
+      <p>Custody Locations</p>
+    </div>
+  </div>
+</div>
+
+<div class="upload-zone">
+  <i class="bi bi-cloud-arrow-up-fill upload-icon"></i>
+  <h4>Drag &amp; Drop Evidence</h4>
+  <p>Upload images, videos, audio or documents</p>
+  <form enctype="multipart/form-data" method="post">
+    {% csrf_token %} {{ form.as_p }}
+    <button class="btn btn-primary">Upload Evidence</button>
+  </form>
+</div>
+
+<div class="card mt-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>Case Evidence</span>
+    <a href="{% url 'complaint_detail' complaint.id %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i>
+      Back to Case #{{ complaint.tracking_id }}
+    </a>
+  </div>
+
+  <div class="card-body">
+    <form class="mb-4" method="get">
+      <div class="input-group">
+        <input
+          type="text"
+          name="search"
+          value="{{ request.GET.search }}"
+          placeholder="Search Evidence by file name"
+          class="form-control"
+        />
+        <button class="btn btn-primary">Search</button>
+      </div>
+    </form>
+
+    <div class="row">
+      {% for item in recent_evidence %}
+
+      <div class="col-md-3 mb-3">
+        <div class="evidence-gallery-card">
+          <i class="bi bi-file-earmark-lock-fill"></i>
+
+          <h6>{{ item.file.name }}</h6>
+
+          <small> {{ item.complaint.tracking_id }} </small>
+
+          <br>
+
+          <a href="{% url 'evidence_detail' item.pk %}" class="btn btn-sm btn-outline-primary mt-2">
+            Details
+          </a>
+        </div>
+      </div>
+
+      {% empty %}
+      <p class="text-secondary">No evidence uploaded for this case yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

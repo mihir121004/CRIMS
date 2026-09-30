@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="my-cases">
+
+    <div class="page-hero cases-hero">
+        <div>
+            <span class="hero-eyebrow">Case Tracking</span>
+            <h2>My Complaints</h2>
+            <p>Search, filter and track every case you have filed.</p>
+        </div>
+        <a href="{% url 'create_complaint' %}" class="btn btn-light">
+            <i class="bi bi-plus-circle me-1"></i> Report New
+        </a>
+    </div>
+
+    <div class="card filter-card">
+        <form method="get">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" name="search" placeholder="Title, tracking ID or location…" value="{{ request.GET.search }}" class="form-control">
+                    </div>
+                </div>
+
+                <div class="col-md-4 col-lg-2">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All statuses</option>
+                        <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="review" {% if request.GET.status == 'review' %}selected{% endif %}>Under Review</option>
+                        <option value="investigation" {% if request.GET.status == 'investigation' %}selected{% endif %}>Investigation Started</option>
+                        <option value="evidence" {% if request.GET.status == 'evidence' %}selected{% endif %}>Evidence Collection</option>
+                        <option value="resolved" {% if request.GET.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4 col-lg-2">
+                    <label class="form-label">Priority</label>
+                    <select name="priority" class="form-select">
+                        <option value="">All priorities</option>
+                        <option value="High" {% if request.GET.priority == 'High' %}selected{% endif %}>High</option>
+                        <option value="Medium" {% if request.GET.priority == 'Medium' %}selected{% endif %}>Medium</option>
+                        <option value="Low" {% if request.GET.priority == 'Low' %}selected{% endif %}>Low</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4 col-lg-2">
+                    <label class="form-label">Category</label>
+                    <select name="category" class="form-select">
+                        <option value="">All categories</option>
+                        <option value="theft" {% if request.GET.category == 'theft' %}selected{% endif %}>Theft</option>
+                        <option value="fraud" {% if request.GET.category == 'fraud' %}selected{% endif %}>Fraud</option>
+                        <option value="cybercrime" {% if request.GET.category == 'cybercrime' %}selected{% endif %}>Cyber Crime</option>
+                        <option value="assault" {% if request.GET.category == 'assault' %}selected{% endif %}>Assault</option>
+                        <option value="other" {% if request.GET.category == 'other' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4 col-lg-1">
+                    <label class="form-label">From</label>
+                    <input type="date" name="start_date" value="{{ request.GET.start_date }}" class="form-control" title="From date">
+                </div>
+
+                <div class="col-md-4 col-lg-1">
+                    <label class="form-label">To</label>
+                    <input type="date" name="end_date" value="{{ request.GET.end_date }}" class="form-control" title="To date">
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-primary">
+                    <i class="bi bi-funnel me-1"></i> Filter
+                </button>
+                {% if request.GET.search or request.GET.status or request.GET.priority or request.GET.category or request.GET.start_date or request.GET.end_date %}
+                <a href="{% url 'my_complaints' %}" class="btn btn-outline-secondary">
+                    Clear
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <div class="results-bar">
+        <span class="results-count">
+            <i class="bi bi-folder2-open me-1"></i>
+            {{ complaints|length }} case{{ complaints|length|pluralize }} found
+        </span>
+    </div>
+
+    <div class="card table-card">
+        <div class="table-responsive">
+            <table class="table cases-table">
+                <thead>
+                    <tr>
+                        <th>Tracking ID</th>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Filed On</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for complaint in complaints %}
+                    <tr>
+                <td class="tracking-cell">{{ complaint.tracking_id }}</td>
+                <td class="title-cell">{{ complaint.title }}</td>
+                <td>{{ complaint.get_category_display }}</td>
+                <td>
+                    {% if complaint.priority == 'High' %}
+                    <span class="badge badge-priority-high"><i class="bi bi-arrow-up-circle me-1"></i>High</span>
+                    {% elif complaint.priority == 'Low' %}
+                    <span class="badge badge-priority-low"><i class="bi bi-arrow-down-circle me-1"></i>Low</span>
+                    {% else %}
+                    <span class="badge badge-priority-medium"><i class="bi bi-dash-circle me-1"></i>Medium</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if complaint.status == 'pending' %}
+                    <span class="badge badge-status-pending"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
+                    {% elif complaint.status == 'resolved' %}
+                    <span class="badge badge-status-resolved"><i class="bi bi-check-circle me-1"></i>Resolved</span>
+                    {% elif complaint.status == 'review' %}
+                    <span class="badge badge-status-review"><i class="bi bi-eye me-1"></i>Under Review</span>
+                    {% elif complaint.status == 'investigation' %}
+                    <span class="badge badge-status-investigation"><i class="bi bi-search me-1"></i>Investigating</span>
+                    {% elif complaint.status == 'evidence' %}
+                    <span class="badge badge-status-evidence"><i class="bi bi-folder-check me-1"></i>Evidence</span>
+                    {% else %}
+                    <span class="badge badge-status-review">{{ complaint.get_status_display }}</span>
+                    {% endif %}
+                </td>
+                <td class="date-cell">{{ complaint.created_at|date:"d M Y" }}</td>
+                <td>
+                    <a href="{% url 'complaint_detail' complaint.id %}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-eye me-1"></i> View
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7">
+                    <div class="cases-empty">
+                        <i class="bi bi-inbox"></i>
+                        <h5>No complaints found</h5>
+                        <p>Try adjusting your filters, or file a new report.</p>
+                        <a href="{% url 'create_complaint' %}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus-circle me-1"></i> Report a Crime
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+
+    </table>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

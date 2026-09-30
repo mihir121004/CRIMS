@@ -1,0 +1,70 @@
+<nav class="top-navbar">
+
+    <div class="d-flex align-items-center gap-2 flex-grow-1" style="min-width:0;">
+
+        <button type="button"
+                class="sidebar-toggle"
+                aria-label="Toggle navigation menu"
+                aria-controls="crims-sidebar"
+                aria-expanded="false">
+            <i class="bi bi-list"></i>
+        </button>
+
+        <div class="page-title mb-0">
+            <span class="nav-eyebrow">CRIMS Console</span>
+            <h1>
+                <span class="nav-title-full">Crime Reporting &amp; Investigation System</span>
+                <span class="nav-title-short">CRIMS</span>
+            </h1>
+        </div>
+    </div>
+
+    <div class="nav-right">
+        <a href="{% url 'notification_list' %}" class="notification-btn" aria-label="Notifications" title="Notifications">
+            <i class="bi bi-bell-fill"></i>
+
+            {% if unread_notifications_count > 0 %}
+            <span class="notification-badge">
+                {{ unread_notifications_count }}
+            </span>
+            {% endif %}
+        </a>
+
+        <span class="nav-divider"></span>
+
+        <div class="profile-box">
+
+            {% if user.is_authenticated %}
+            <div class="profile-avatar" title="{{ request.user.username }}">
+                {{ request.user.username|first|upper }}
+            </div>
+
+            <div class="profile-info">
+                <div class="profile-name">
+                    {{ request.user.username }}
+                </div>
+
+                <span class="profile-role">
+                    {{ request.user.role|default:"member"|capfirst }}
+                </span>
+            </div>
+
+            <form method="post" action="{% url 'logout' %}" class="m-0">
+                {% csrf_token %}
+                <button type="submit" class="btn-logout" title="Logout">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span>Logout</span>
+                </button>
+            </form>
+            {% else %}
+            <a href="{% url 'login' %}" class="btn-login">
+                <i class="bi bi-box-arrow-in-right"></i>
+                <span>Login</span>
+            </a>
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</nav>

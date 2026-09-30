@@ -1,0 +1,15 @@
+.env
+.env*
+media/
+__pycache__/
+*.pyc
+.vercel/
+.kilo/
+env/
+migrations_backup/
+audit.json
+contrast_audit.json
+ui_audit.json
+smoke_tests.py
+CRIMS_source_code.md
+.DS_Store

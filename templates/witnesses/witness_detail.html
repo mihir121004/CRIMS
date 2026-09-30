@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container-fluid witnesses">
+
+  <div class="page-hero wp-hero">
+    <div class="wp-hero-text">
+      <span class="hero-eyebrow">Witness Profile</span>
+      <h2>{{ witness.full_name }}</h2>
+      <p>Age: {{ witness.age }} years &middot; Status: {% if witness.protected_witness %}Protected{% else %}Standard{% endif %}</p>
+    </div>
+    <div class="hero-icon">
+      <i class="bi bi-person-video3"></i>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>
+        <i class="bi bi-person-video3 me-2"></i>
+        Profile Information
+      </span>
+      {% if witness.protected_witness %}
+      <span class="badge bg-info fs-6">Protected</span>
+      {% else %}
+      <span class="badge bg-secondary fs-6">Standard</span>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-4 text-center">
+          <div class="mb-3">
+            <i class="bi bi-person-video3" style="font-size: 6rem;"></i>
+          </div>
+        </div>
+        <div class="col-md-8">
+          <h3>{{ witness.full_name }}</h3>
+          <p>
+            <strong>Age:</strong> {{ witness.age }} years
+            &nbsp;|&nbsp;
+            <strong>Status:</strong>
+            {% if witness.protected_witness %}
+            <span class="text-info">Protected</span>
+            {% else %}
+            <span class="text-secondary">Standard</span>
+            {% endif %}
+          </p>
+
+          <p>
+            <strong><i class="bi bi-telephone me-1"></i> Phone:</strong>
+            {{ witness.phone|default:"—" }}
+          </p>
+
+          <p>
+            <strong><i class="bi bi-envelope me-1"></i> Email:</strong>
+            {{ witness.email|default:"—" }}
+          </p>
+
+          <p>
+            <strong><i class="bi bi-geo-alt me-1"></i> Address:</strong>
+            {{ witness.address }}
+          </p>
+
+          <p>
+            <strong><i class="bi bi-chat-left-text me-1"></i> Statement:</strong>
+          </p>
+          <p class="text-secondary">
+            {{ witness.statement|default:"No statement recorded." }}
+          </p>
+
+          <p>
+            <small class="text-secondary"><i class="bi bi-calendar3 me-1"></i> Added {{ witness.created_at|date:"d M Y" }}</small>
+          </p>
+
+          <div class="d-flex gap-2">
+            <a href="{% url 'witness_list' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-arrow-left"></i>
+              Back to Witnesses
+            </a>
+            {% if witness.protected_witness %}
+            <a href="{% url 'witness_detail' witness.id %}?status=standard" class="btn btn-warning">
+              <i class="bi bi-shield-check"></i> Change Protection
+            </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

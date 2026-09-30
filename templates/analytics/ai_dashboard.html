@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="analytics-page">
+
+<div class="page-hero analytics-hero">
+  <div>
+    <span class="hero-eyebrow">AI Classification</span>
+    <h2 class="fw-bold">AI Analytics Dashboard</h2>
+    <p>Complaints classified automatically by the AI engine.</p>
+  </div>
+  <div>
+    <span class="badge ai-active-pill"><span class="live-dot"></span> AI Engine Active</span>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6 col-xl-3">
+    <div class="card stat-card">
+      <div class="stat-icon stat-icon-blue"><i class="bi bi-robot"></i></div>
+      <div><div class="stat-value">{{ complaints|length }}</div><div class="stat-label">Total Complaints</div></div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="card stat-card stat-card-success">
+      <div class="stat-icon stat-icon-green"><i class="bi bi-cpu"></i></div>
+      <div><div class="stat-value">{{ ai_classified_count }}</div><div class="stat-label">AI Classified</div></div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="card stat-card stat-card-info">
+      <div class="stat-icon stat-icon-teal"><i class="bi bi-tags-fill"></i></div>
+      <div><div class="stat-value">{{ category_count }}</div><div class="stat-label">Categories Detected</div></div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="card stat-card stat-card-danger">
+      <div class="stat-icon stat-icon-red"><i class="bi bi-exclamation-octagon-fill"></i></div>
+      <div><div class="stat-value">{{ unclassified_count }}</div><div class="stat-label">Awaiting Classification</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="card section-card">
+    <div class="section-card-header">
+        <span><i class="bi bi-list-ul me-2"></i>AI Categorized Complaints</span>
+        <span class="badge bg-primary">{{ complaints|length }} cases</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table zones-table mb-0">
+            <thead>
+                <tr>
+                    <th>Complaint</th>
+                    <th>AI Category</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for complaint in complaints %}
+                <tr>
+                    <td><strong>{{ complaint.title }}</strong></td>
+                    <td>
+                        {% if complaint.ai_category %}
+                        <span class="badge ai-cat">{{ complaint.ai_category }}</span>
+                        {% else %}
+                        <span class="text-secondary">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="2" class="empty-cell">
+                        <i class="bi bi-inbox"></i>
+                        <p class="mb-0">No complaints yet.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+      </div>
+    </div>
+</div>
+
+</div>
+
+{% endblock %}

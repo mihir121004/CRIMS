@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container-fluid">
+  <div class="page-hero dark-hero">
+    <div>
+      <span class="hero-eyebrow">Evidence</span>
+      <h2>Evidence Details</h2>
+      <p>Case: {{ evidence.complaint.tracking_id }}</p>
+    </div>
+    <div class="hero-icon">
+      <i class="bi bi-file-earmark-lock"></i>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header">Evidence Information</div>
+        <div class="card-body">
+          <h4>
+            <i class="bi bi-file-earmark-lock-fill"></i>
+            {{ evidence.file.name }}
+          </h4>
+          <p>
+            Complaint:
+            <a href="{% url 'complaint_detail' evidence.complaint.id %}">
+              {{ evidence.complaint.tracking_id }}
+            </a>
+          </p>
+          <p>
+            Uploaded:
+            {{ evidence.uploaded_at }}
+          </p>
+          <p>
+            Uploaded By:
+            {{ evidence.complaint.citizen }}
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card h-100">
+        <div class="card-header">Secure Preview</div>
+        <div class="card-body text-center">
+          {% if evidence.file %}
+          <a href="{{ evidence.file.url }}" target="_blank" class="btn btn-primary">
+            Open Evidence File
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-4">
+    <div class="card-header">Chain of Custody</div>
+    <div class="card-body">
+      {% for custody in custody_logs %}
+      <div class="timeline-item">
+        <strong>
+          {{ custody.transferred_by }}
+          &rarr;
+          {{ custody.received_by }}
+        </strong>
+        <br>
+        <small class="text-secondary">
+          {{ custody.location }} &middot; {{ custody.transferred_at }}
+        </small>
+        {% if custody.remarks %}
+        <p class="mb-0">{{ custody.remarks }}</p>
+        {% endif %}
+      </div>
+      <hr>
+      {% empty %}
+      <p class="text-secondary">No custody transfers recorded yet.</p>
+      {% endfor %}
+
+      <a href="{% url 'transfer_evidence' evidence.pk %}" class="btn btn-warning mt-2">
+        <i class="bi bi-arrow-left-right"></i>
+        Transfer Evidence
+      </a>
+      <a href="{% url 'complaint_detail' evidence.complaint.id %}" class="btn btn-outline-secondary mt-2">
+        Back to Case
+      </a>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

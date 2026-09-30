@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container-fluid">
+  <div class="page-hero dark-hero">
+    <div>
+      <span class="hero-eyebrow">Evidence Transfer</span>
+      <h2>Transfer Evidence</h2>
+      <p>Case: {{ evidence.complaint.tracking_id }} — {{ evidence.complaint.title }}</p>
+    </div>
+    <div class="hero-icon">
+      <i class="bi bi-arrow-left-right"></i>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header">Transfer Details</div>
+        <div class="card-body">
+          <p>
+            <strong>File:</strong> {{ evidence.file.name }}
+          </p>
+          <p>
+            <strong>Case:</strong>
+            <a href="{% url 'complaint_detail' evidence.complaint.id %}">
+              {{ evidence.complaint.tracking_id }}
+            </a>
+          </p>
+
+          <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button class="btn btn-primary">
+              Transfer
+            </button>
+            <a href="{% url 'evidence_detail' evidence.pk %}" class="btn btn-outline-secondary">
+              Cancel
+            </a>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header">Chain of Custody</div>
+        <div class="card-body">
+          {% for custody in custody_logs %}
+          <div class="timeline-item">
+            <h6>
+              {{ custody.transferred_by }}
+              →
+              {{ custody.received_by }}
+            </h6>
+            <small>
+              {{ custody.location }} &middot; {{ custody.transferred_at }}
+            </small>
+          </div>
+          <hr>
+          {% empty %}
+          <p class="text-secondary">No custody transfers recorded yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

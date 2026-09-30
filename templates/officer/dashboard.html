@@ -1,0 +1,265 @@
+{% extends 'base.html' %} {% block content %}
+
+<div class="container-fluid dash-page">
+
+  <!-- PAGE HEADER -->
+  <div class="dash-hero">
+    <div class="dash-hero-text">
+      <span class="dash-eyebrow">Officer Command Center</span>
+      <h2 class="fw-bold dash-title">Welcome back, {{ request.user.username }}</h2>
+      <p>Monitor investigations, evidence and assigned cases in one place.</p>
+      <div class="dash-hero-actions">
+        <a href="{% url 'officer_complaints' %}" class="btn btn-primary">
+          <i class="bi bi-folder-check me-1"></i> Manage Complaints
+        </a>
+        <a href="{% url 'my_assigned_cases' %}" class="btn btn-outline-light">
+          <i class="bi bi-briefcase me-1"></i> My Cases
+        </a>
+      </div>
+    </div>
+    <div class="dash-hero-icon">
+      <i class="bi bi-shield-lock-fill fs-1 text-white opacity-75"></i>
+    </div>
+  </div>
+
+  <!-- KPI CARDS -->
+
+  <div class="row g-4 mt-1">
+    <div class="col-md-6 col-xl-3">
+      <div class="stat-card stat-total">
+        <div class="stat-icon"><i class="bi bi-folder-check"></i></div>
+        <div>
+          <h3 class="counter">{{ assigned_cases }}</h3>
+          <p>Assigned Cases</p>
+        </div>
+        <a href="{% url 'officer_complaints' %}" class="stat-link">View all <i class="bi bi-arrow-right"></i></a>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+      <div class="stat-card stat-warning">
+        <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+          <h3 class="counter">{{ pending_cases }}</h3>
+          <p>Pending Cases</p>
+        </div>
+        <a href="{% url 'officer_complaints' %}" class="stat-link">View pending <i class="bi bi-arrow-right"></i></a>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+      <div class="stat-card stat-primary">
+        <div class="stat-icon"><i class="bi bi-search"></i></div>
+        <div>
+          <h3 class="counter">{{ active_investigations }}</h3>
+          <p>Active Investigations</p>
+        </div>
+        <a href="{% url 'my_assigned_cases' %}" class="stat-link">Track cases <i class="bi bi-arrow-right"></i></a>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+      <div class="stat-card stat-success">
+        <div class="stat-icon"><i class="bi bi-check-circle-fill"></i></div>
+        <div>
+          <h3 class="counter">{{ solved_cases }}</h3>
+          <p>Solved Cases</p>
+        </div>
+        <a href="{% url 'officer_complaints' %}" class="stat-link">View solved <i class="bi bi-arrow-right"></i></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKLOAD + PRIORITY SECTION -->
+  <div class="row g-4 mt-4">
+    <div class="col-lg-8">
+      <div class="card dash-card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-graph-up me-2"></i>Investigation Workload</span>
+          <span class="badge bg-primary">{{ assigned_cases }} assigned</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap">
+            <canvas id="workloadChart"></canvas>
+          </div>
+          <div class="chart-legend">
+            <span><span class="dot dot-total"></span>Assigned ({{ assigned_cases }})</span>
+            <span><span class="dot dot-warning"></span>Investigating ({{ active_investigations }})</span>
+            <span><span class="dot dot-success"></span>Resolved ({{ solved_cases }})</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card dash-card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-exclamation-triangle me-2"></i>Priority Cases</span>
+        </div>
+        <div class="card-body">
+          <div class="priority-row mb-4">
+            <div class="priority-header">
+              <span class="priority-dot priority-high"></span>
+              <span>High Priority</span>
+            </div>
+            <div class="priority-bar-row">
+              <span class="priority-value">{{ high_priority_percent }}%</span>
+              <div class="progress progress-thin">
+                <div class="progress-bar progress-high" style="width: {{ high_priority_percent }};"></div>
+              </div>
+            </div>
+          </div>
+          <div class="priority-row mb-4">
+            <div class="priority-header">
+              <span class="priority-dot priority-medium"></span>
+              <span>Medium Priority</span>
+            </div>
+            <div class="priority-bar-row">
+              <span class="priority-value">{{ medium_priority_percent }}%</span>
+              <div class="progress progress-thin">
+                <div class="progress-bar progress-medium" style="width: {{ medium_priority_percent }};"></div>
+              </div>
+            </div>
+          </div>
+          <div class="priority-row">
+            <div class="priority-header">
+              <span class="priority-dot priority-low"></span>
+              <span>Low Priority</span>
+            </div>
+            <div class="priority-bar-row">
+              <span class="priority-value">{{ low_priority_percent }}%</span>
+              <div class="progress progress-thin">
+                <div class="progress-bar progress-low" style="width: {{ low_priority_percent }};"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECENT ASSIGNED CASES TABLE -->
+  <div class="card dash-card mt-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-clipboard2-pulse me-2"></i>Recent Assigned Cases</span>
+      <a href="{% url 'officer_complaints' %}" class="btn btn-sm btn-outline-light">View All</a>
+    </div>
+
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table dash-table mb-0">
+          <thead>
+            <tr>
+              <th>Tracking ID</th>
+              <th>Crime Type</th>
+              <th>Status</th>
+              <th>Priority</th>
+              <th class="text-end">Action</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for case in assigned_complaints %}
+
+            <tr>
+              <td class="fw-semibold">{{ case.tracking_id }}</td>
+
+              <td>{{ case.get_category_display|default:case.category }}</td>
+
+              <td>
+                {% if case.status == 'pending' or case.status == 'Under Review' %}
+                <span class="badge status-pending">{{ case.get_status_display|default:case.status }}</span>
+                {% elif case.status == 'investigation' or case.status == 'evidence' %}
+                <span class="badge status-review">{{ case.get_status_display|default:case.status }}</span>
+                {% else %}
+                <span class="badge status-resolved">{{ case.get_status_display|default:case.status }}</span>
+                {% endif %}
+              </td>
+
+              <td>
+                {% if case.priority == 'High' %}
+                <span class="badge priority-high">{{ case.priority }}</span>
+                {% elif case.priority == 'Medium' %}
+                <span class="badge priority-medium">{{ case.priority }}</span>
+                {% else %}
+                <span class="badge priority-low">{{ case.priority }}</span>
+                {% endif %}
+              </td>
+
+              <td class="text-end">
+                <a href="{% url 'complaint_detail' case.id %}" class="btn btn-sm btn-primary">
+                  Open<i class="bi bi-arrow-right ms-1"></i>
+                </a>
+              </td>
+            </tr>
+
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center py-5 empty-state">
+                <i class="bi bi-inbox"></i>
+                <p class="mt-2 mb-3">No cases assigned yet.</p>
+                <a href="{% url 'officer_complaints' %}" class="btn btn-sm btn-primary">Browse Complaints</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INVESTIGATION TIMELINE WIDGET -->
+<div class="card mt-4">
+  <div class="card-header">Investigation Timeline</div>
+
+  <div class="card-body">
+    {% for note in recent_notes %}
+
+    <div class="timeline-item">
+      <h6>{{ note.investigation.complaint.tracking_id }}</h6>
+
+      <small class="text-secondary"> {{ note.created_at }} </small>
+
+      <p>{{ note.note }}</p>
+    </div>
+
+    <hr />
+
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+
+  const workload =
+  document.getElementById('workloadChart');
+
+  new Chart(workload, {
+
+      type:'bar',
+
+      data:{
+
+          labels:[
+              'Assigned',
+              'Investigating',
+              'Resolved'
+          ],
+
+          datasets:[{
+
+              data:[
+                  {{ assigned_cases }},
+                  {{ active_investigations }},
+                  {{ solved_cases }}
+              ]
+
+          }]
+
+      }
+
+  });
+</script>
+
+{% endblock %}

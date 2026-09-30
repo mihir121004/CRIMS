@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container-fluid suspects">
+  <div class="page-hero sp-hero">
+    <div class="sp-hero-text">
+      <span class="hero-eyebrow">Suspect Profile</span>
+      <h2>{{ suspect.full_name }}</h2>
+      <p>Age: {{ suspect.age }} &middot; Gender: {{ suspect.gender }}</p>
+    </div>
+    <div class="hero-icon">
+      <i class="bi bi-person-badge"></i>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>Profile Information</span>
+      {% if suspect.wanted %}
+      <span class="badge bg-danger fs-6">WANTED</span>
+      {% else %}
+      <span class="badge bg-success fs-6">Cleared</span>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-4 text-center">
+          {% if suspect.photo %}
+          <img src="{{ suspect.photo.url }}" class="img-fluid rounded" alt="{{ suspect.full_name }}">
+          {% else %}
+          <i class="bi bi-person-fill" style="font-size: 6rem;"></i>
+          {% endif %}
+        </div>
+        <div class="col-md-8">
+          <h3>{{ suspect.full_name }}</h3>
+          <p>
+            <strong>Age:</strong> {{ suspect.age }}
+            &nbsp;|&nbsp;
+            <strong>Gender:</strong> {{ suspect.gender }}
+          </p>
+          <p>
+            <strong>Phone:</strong> {{ suspect.phone|default:"—" }}
+          </p>
+          <p>
+            <strong>Address:</strong> {{ suspect.address }}
+          </p>
+          <p>
+            <strong>Aadhaar Number:</strong> {{ suspect.aadhaar_number|default:"—" }}
+          </p>
+          <p>
+            <strong>Linked Case:</strong>
+            <a href="{% url 'complaint_detail' suspect.complaint.id %}">
+              {{ suspect.complaint.tracking_id }} — {{ suspect.complaint.title }}
+            </a>
+          </p>
+          <p>
+            <strong>Criminal History:</strong>
+          </p>
+          <p class="text-secondary">
+            {{ suspect.criminal_history|default:"No records." }}
+          </p>
+          <p>
+            <small class="text-secondary">Added {{ suspect.created_at|date:"d M Y" }}</small>
+          </p>
+          <a href="{% url 'suspect_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+            Back to Suspects
+          </a>
+          {% if suspect.wanted %}
+          <a href="{% url 'suspect_detail' suspect.id %}?clear" class="btn btn-success">
+            <i class="bi bi-check2-circle"></i> Mark Cleared
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

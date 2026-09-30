@@ -1,0 +1,222 @@
+{% extends 'base.html' %} {% block content %}
+
+<div class="map-page">
+
+<div class="page-hero map-hero">
+  <div>
+    <span class="hero-eyebrow">GIS Intelligence</span>
+    <h2 class="fw-bold">GIS Crime Intelligence Center</h2>
+    <p>
+      Real-time crime mapping and hotspot monitoring.
+    </p>
+  </div>
+  <div>
+    <span class="badge map-live-pill"><span class="live-dot"></span> Live GIS Monitoring</span>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6 col-xl-3">
+    <div class="card stat-card">
+      <div class="stat-icon stat-icon-blue"><i class="bi bi-geo-alt-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ total_locations }}</div>
+        <div class="stat-label">Crime Locations</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6 col-xl-3">
+    <div class="card stat-card stat-card-danger">
+      <div class="stat-icon stat-icon-red"><i class="bi bi-fire"></i></div>
+      <div>
+        <div class="stat-value">{{ hotspot_count }}</div>
+        <div class="stat-label">Hotspots</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="card stat-card stat-card-success">
+      <div class="stat-icon stat-icon-green"><i class="bi bi-shield-check"></i></div>
+      <div>
+        <div class="stat-value">{{ safe_zones }}</div>
+        <div class="stat-label">Safe Zones</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="card stat-card stat-card-info">
+      <div class="stat-icon stat-icon-teal"><i class="bi bi-bar-chart-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ crime_growth }}</div>
+        <div class="stat-label">Crime Growth</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card filter-card mb-4">
+  <div class="card-body">
+    <form method="get">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label">Crime Category</label>
+          <select name="category" class="form-select">
+            <option value="">All Crime</option>
+            <option value="theft" {% if request.GET.category == 'theft' %}selected{% endif %}>Theft</option>
+            <option value="fraud" {% if request.GET.category == 'fraud' %}selected{% endif %}>Fraud</option>
+            <option value="cybercrime" {% if request.GET.category == 'cybercrime' %}selected{% endif %}>Cyber Crime</option>
+            <option value="assault" {% if request.GET.category == 'assault' %}selected{% endif %}>Assault</option>
+            <option value="other" {% if request.GET.category == 'other' %}selected{% endif %}>Other</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Priority</label>
+          <select name="priority" class="form-select">
+            <option value="">All Priorities</option>
+            <option value="High" {% if request.GET.priority == 'High' %}selected{% endif %}>High</option>
+            <option value="Medium" {% if request.GET.priority == 'Medium' %}selected{% endif %}>Medium</option>
+            <option value="Low" {% if request.GET.priority == 'Low' %}selected{% endif %}>Low</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel me-1"></i>Apply Filters</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card map-shell mb-4">
+  <div class="map-shell-header">
+    <span><i class="bi bi-map me-2"></i>Interactive Crime Map</span>
+    {% if request.GET.category or request.GET.priority %}
+    <a href="{% url 'crime_map' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+    {% endif %}
+  </div>
+  <div class="map-shell-body">
+    <div id="crimeMap"></div>
+  </div>
+</div>
+
+<div class="card section-card mb-4">
+    <div class="section-card-header">
+        <span><i class="bi bi-cpu me-2"></i>AI Hotspot Prediction</span>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="card risk-card risk-card-red">
+                    <div class="risk-icon"><i class="bi bi-bag-fill"></i></div>
+                    <h4>
+                        {{ prediction_theft }}
+                    </h4>
+                    <p>
+                        Theft Risk
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card risk-card risk-card-amber">
+                    <div class="risk-icon"><i class="bi bi-credit-card-fill"></i></div>
+                    <h4>
+                        {{ predicted_fraud }}
+                    </h4>
+                    <p>
+                        Fraud Risk
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card risk-card risk-card-blue">
+                    <div class="risk-icon"><i class="bi bi-laptop-fill"></i></div>
+                    <h4>
+                        {{ predicted_cyber }}
+                    </h4>
+                    <p>
+                        Cyber Risk
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card section-card">
+    <div class="section-card-header">
+        <span><i class="bi bi-exclamation-triangle-fill me-2"></i>High-Risk Zones</span>
+        <span class="badge bg-danger">{{ hotspot_zones|length }} zones</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table zones-table mb-0">
+            <thead>
+                <tr>
+                    <th>Area</th>
+                    <th>Cases</th>
+                    <th>Risk Level</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for zone in hotspot_zones %}
+                <tr>
+                    <td><strong>{{ zone.location }}</strong></td>
+                    <td>{{ zone.total_cases }}</td>
+                    <td>
+                        <span class="badge risk-high">
+                            High Risk
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="empty-cell">
+                        <i class="bi bi-shield-check"></i>
+                        <p class="mb-0">No high-risk zones detected.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+      </div>
+    </div>
+</div>
+
+</div>
+
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+  var map = L.map("crimeMap").setView([23.033863, 72.585022], 11);
+
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+  }).addTo(map);
+</script>
+
+<script>
+
+  {% for complaint in complaints %}
+
+  L.marker(
+  [
+  {{ complaint.latitude }},
+  {{ complaint.longitude }}
+  ]
+  )
+  .addTo(map)
+  .bindPopup(
+
+  `
+  <b>{{ complaint.category }}</b>
+  <br>
+  {{ complaint.status }}
+  `
+
+  );
+
+  {% endfor %}
+</script>
+{% endblock %}

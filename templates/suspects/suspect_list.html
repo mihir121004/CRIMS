@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="suspects">
+
+    <!-- PAGE HERO -->
+    <div class="page-hero sp-hero">
+        <div>
+            <span class="hero-eyebrow">Offender Records</span>
+            <h2>Suspects</h2>
+            <p>Track suspects linked to cases, their wanted status and criminal history.</p>
+        </div>
+        <a href="{% url 'suspect_create' %}" class="btn btn-light">
+            <i class="bi bi-person-plus me-1"></i> Add Suspect
+        </a>
+    </div>
+
+    <!-- QUICK STATS -->
+    <div class="row g-4 sp-stats-row">
+        <div class="col-6 col-lg-3">
+            <div class="stat-card stat-total">
+                <div class="stat-icon"><i class="bi bi-people"></i></div>
+                <div>
+                    <h3 class="counter">{{ total_count }}</h3>
+                    <p>Total Suspects</p>
+                </div>
+                <a href="{% url 'suspect_list' %}" class="stat-link">
+                    View all <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="stat-card stat-card-danger">
+                <div class="stat-icon"><i class="bi bi-exclamation-octagon"></i></div>
+                <div>
+                    <h3 class="counter">{{ wanted_count }}</h3>
+                    <p>Wanted</p>
+                </div>
+                <a href="?status=wanted" class="stat-link">
+                    Review wanted <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="stat-card stat-success">
+                <div class="stat-icon"><i class="bi bi-shield-check"></i></div>
+                <div>
+                    <h3 class="counter">{{ clear_count }}</h3>
+                    <p>Cleared</p>
+                </div>
+                <a href="?status=clear" class="stat-link">
+                    View cleared <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="stat-card stat-primary">
+                <div class="stat-icon"><i class="bi bi-link-45deg"></i></div>
+                <div>
+                    <h3 class="counter">{{ linked_case_count }}</h3>
+                    <p>Linked Cases</p>
+                </div>
+                <a href="{% url 'investigation_list' %}" class="stat-link">
+                    Track cases <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEARCH & FILTERS -->
+    <div class="card filter-card sp-filters">
+        <form method="get">
+            <div class="row g-3">
+                <div class="col-lg-5 col-md-6">
+                    <label class="form-label">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" name="search" placeholder="Name, Aadhaar or tracking ID…" value="{{ request.GET.search }}" class="form-control">
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All statuses</option>
+                        <option value="wanted" {% if request.GET.status == 'wanted' %}selected{% endif %}>Wanted</option>
+                        <option value="clear" {% if request.GET.status == 'clear' %}selected{% endif %}>Cleared</option>
+                    </select>
+                </div>
+                <div class="col-lg-1 col-md-4">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100 filter-submit" title="Apply filters">
+                        <i class="bi bi-funnel"></i>
+                    </button>
+                </div>
+            </div>
+            {% if request.GET.search or request.GET.status %}
+            <div class="filter-actions">
+                <a href="{% url 'suspect_list' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-x-circle me-1"></i> Clear Filters
+                </a>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- RESULTS BAR -->
+    <div class="results-bar">
+        <span class="results-count">
+            <i class="bi bi-people-fill me-1"></i>
+            {{ suspects.count }} suspect{{ suspects.count|pluralize }} found
+        </span>
+        {% if request.GET.search or request.GET.status %}
+        <span class="results-filtered">
+            <i class="bi bi-funnel-fill me-1"></i> Filtered view
+        </span>
+        {% endif %}
+    </div>
+
+    <!-- SUSPECT REGISTER -->
+    <div class="card table-card section-card sp-table-card">
+        <div class="section-card-header">
+            <span><i class="bi bi-kanban me-2"></i>Suspect Register</span>
+            <span class="badge bg-primary">{{ suspects.count }} on file</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table sp-table mb-0 table-hover">
+                <thead class="sp-table-head">
+                <tr>
+                    <th>Suspect</th>
+                    <th>Age</th>
+                    <th>Linked Complaint</th>
+                    <th>Status</th>
+                    <th>Added</th>
+                    <th class="text-end sp-head-actions">Action</th>
+                </tr>
+                </thead>
+                <tbody class="sp-table-body">
+                {% for s in suspects %}
+                <tr class="sp-row {% if s.wanted %}sp-row-wanted{% endif %}">
+                    <td data-label="Suspect">
+                        <div class="sp-cell">
+                            <div class="sp-avatar">
+                                {% if s.photo %}
+                                    <img src="{{ s.photo.url }}" alt="{{ s.full_name }}">
+                                {% else %}
+                                    <span>{{ s.full_name|slice:":1"|upper }}{% if s.gender == 'Female' %}{{ s.full_name|slice:"1:2"|lower }}{% else %}{{ s.full_name|slice:"1:2"|upper }}{% endif %}</span>
+                                {% endif %}
+                            </div>
+                            <div class="sp-cell-info">
+                                <span class="sp-name">{{ s.full_name }}</span>
+                                <span class="sp-sub {% if s.gender == 'Male' %}sp-sub-male{% elif s.gender == 'Female' %}sp-sub-female{% else %}sp-sub-other{% endif %}">
+                                    <i class="bi bi-{{ s.gender|lower }}"></i> {{ s.gender }} · {{ s.age }} yrs
+                                </span>
+                            </div>
+                        </div>
+                    </td>
+                    <td data-label="Age" class="sp-age">{{ s.age }}</td>
+                    <td data-label="Linked Complaint">
+                        <div class="sp-complaint-cell">
+                            <span class="tracking-pill">{{ s.complaint.tracking_id|default:'N/A' }}</span>
+                            <span class="sp-complaint-meta">{{ s.complaint.category|default:'Complaint' }}{% if s.complaint.location %} · {{ s.complaint.location }}{% endif %}</span>
+                            <a href="{% url 'complaint_detail' s.complaint_id %}" class="sp-link" title="Open complaint"><i class="bi bi-file-earmark-text"></i></a>
+                        </div>
+                    </td>
+                    <td data-label="Status" class="sp-status-cell">
+                        {% if s.wanted %}
+                            <span class="sp-wanted-chip"><i class="bi bi-exclamation-triangle-fill me-1"></i>Wanted</span>
+                        {% else %}
+                            <span class="sp-clear-chip"><i class="bi bi-shield-check me-1"></i>Cleared</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Added" class="sp-date-cell">
+                        <span class="sp-date-main">{{ s.created_at|date:"d M Y" }}</span>
+                        <span class="sp-date-sub">{{ s.created_at|timesince }} ago</span>
+                    </td>
+                    <td class="text-end sp-actions-cell" data-label="Action">
+                        <a href="{% url 'suspect_detail' s.id %}" class="action-btn sp-action-view" title="View suspect">
+                            <i class="bi bi-eye"></i><span>View</span>
+                        </a>
+                        {% if s.wanted %}
+                            <a href="{% url 'suspect_detail' s.id %}?clear" class="action-btn sp-action-clear" title="Mark cleared">
+                                <i class="bi bi-check2-circle"></i><span>Clear</span>
+                            </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr class="sp-empty-row">
+                    <td colspan="6">
+                        <div class="sp-empty">
+                            <i class="bi bi-person-badge"></i>
+                            <h5>No suspects on file</h5>
+                            <p>Add a suspect from the Add Suspect button, or adjust your filters.</p>
+                            <a href="{% url 'suspect_create' %}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-person-plus me-1"></i> Add Suspect
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

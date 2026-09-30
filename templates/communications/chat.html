@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container-fluid">
+  <div class="page-hero dark-hero">
+    <div>
+      <span class="hero-eyebrow">Communication</span>
+      <h2>Case Communication</h2>
+      <p>View and send messages related to this case.</p>
+    </div>
+    <div class="hero-icon">
+      <i class="bi bi-chat-dots"></i>
+    </div>
+  </div>
+
+  <div class="card mt-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Messages</h5>
+      <a href="{% url 'complaint_detail' complaint.id %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Case
+      </a>
+    </div>
+    <div class="card-body">
+      {% for message in messages %}
+      <div class="border rounded p-2 mb-2">
+        <strong>
+          {{ message.sender }}
+        </strong>
+        <small>
+          {{ message.created_at }}
+        </small>
+        <br>
+        {{ message.content }}
+      </div>
+      {% empty %}
+      <div class="alert alert-info">
+        No messages yet.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card mt-3">
+    <div class="card-header">
+      Send Message
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn btn-primary">
+          Send
+        </button>
+        <a href="{% url 'complaint_detail' complaint.id %}" class="btn btn-outline-secondary">
+          Back to Case
+        </a>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

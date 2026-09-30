@@ -1,0 +1,135 @@
+{% load static %}
+
+<div class="sidebar" id="crims-sidebar">
+
+    <div class="sidebar-header">
+
+        <div class="logo-box">
+            <i class="bi bi-shield-lock-fill"></i>
+        </div>
+
+        <div class="logo-meta">
+            <h4 class="logo-text">CRIMS</h4>
+            <small>Investigation System</small>
+        </div>
+
+        <button type="button"
+                class="sidebar-close"
+                aria-label="Close navigation menu">
+            <i class="bi bi-x-lg"></i>
+        </button>
+
+    </div>
+
+    <ul class="sidebar-menu">
+
+        <li class="menu-label">Main</li>
+
+        <li>
+            <a href="{% if request.user.role == 'officer' %}{% url 'officer_dashboard' %}{% elif request.user.role == 'admin' %}{% url 'admin_dashboard' %}{% else %}{% url 'citizen_dashboard' %}{% endif %}" class="{% if request.resolver_match.url_name == 'citizen_dashboard' or request.resolver_match.url_name == 'officer_dashboard' or request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+                <span class="menu-icon"><i class="bi bi-speedometer2"></i></span>
+                <span>Dashboard</span>
+            </a>
+        </li>
+
+        {% if request.user.role == 'citizen' %}
+        <li>
+            <a href="{% url 'create_complaint' %}" class="{% if request.resolver_match.url_name == 'create_complaint' %}active{% endif %}">
+                <span class="menu-icon"><i class="bi bi-file-earmark-plus"></i></span>
+                <span>New Complaint</span>
+            </a>
+        </li>
+
+        <li>
+            <a href="{% url 'my_complaints' %}" class="{% if request.resolver_match.url_name == 'my_complaints' or request.resolver_match.url_name == 'complaint_detail' %}active{% endif %}">
+                <span class="menu-icon"><i class="bi bi-folder2-open"></i></span>
+                <span>My Complaints</span>
+            </a>
+        </li>
+        {% endif %}
+
+        {% if request.user.role == 'officer' or request.user.role == 'admin' %}
+        <li class="menu-label">Case Work</li>
+
+        <li>
+            <a href="{% url 'officer_complaints' %}" class="{% if request.resolver_match.url_name == 'officer_complaints' %}active{% endif %}">
+                <span class="menu-icon"><i class="bi bi-folder2-open"></i></span>
+                <span>All Complaints</span>
+            </a>
+        </li>
+
+        <li>
+            <a href="{% url 'investigation_list' %}" class="{% if request.resolver_match.url_name == 'investigation_list' or request.resolver_match.url_name == 'investigation_detail' or request.resolver_match.url_name == 'assign_officer' %}active{% endif %}">
+                <span class="menu-icon"><i class="bi bi-search"></i></span>
+                <span>Investigations</span>
+            </a>
+        </li>
+
+        <li>
+            <a href="{% url 'my_assigned_cases' %}" class="{% if request.resolver_match.url_name == 'my_assigned_cases' %}active{% endif %}">
+                <span class="menu-icon"><i class="bi bi-person-check"></i></span>
+                <span>My Cases</span>
+            </a>
+        </li>
+
+        <li>
+            <a href="{% url 'suspect_list' %}" class="{% if request.resolver_match.url_name == 'suspect_list' or request.resolver_match.url_name == 'suspect_detail' or request.resolver_match.url_name == 'suspect_create' %}active{% endif %}">
+                <span class="menu-icon"><i class="bi bi-person-badge"></i></span>
+                <span>Suspects</span>
+            </a>
+        </li>
+
+        <li>
+            <a href="{% url 'witness_list' %}" class="{% if request.resolver_match.url_name == 'witness_list' or request.resolver_match.url_name == 'witness_detail' or request.resolver_match.url_name == 'witness_create' %}active{% endif %}">
+                <span class="menu-icon"><i class="bi bi-people"></i></span>
+                <span>Witnesses</span>
+            </a>
+        </li>
+        {% endif %}
+
+        <li class="menu-label">Updates &amp; Intel</li>
+
+        <li>
+            <a href="{% url 'notification_list' %}" class="{% if request.resolver_match.url_name == 'notification_list' %}active{% endif %}">
+                <span class="menu-icon"><i class="bi bi-bell-fill"></i></span>
+                <span>Notifications</span>
+                {% if unread_notifications_count > 0 %}
+                <span class="menu-count">{{ unread_notifications_count }}</span>
+                {% endif %}
+            </a>
+        </li>
+
+        <li>
+            <a href="{% url 'activity_logs' %}" class="{% if request.resolver_match.url_name == 'activity_logs' %}active{% endif %}">
+                <span class="menu-icon"><i class="bi bi-clock-history"></i></span>
+                <span>Activity Logs</span>
+            </a>
+        </li>
+
+        <li>
+            <a href="{% url 'crime_map' %}" class="{% if request.resolver_match.url_name == 'crime_map' %}active{% endif %}">
+                <span class="menu-icon"><i class="bi bi-geo-alt-fill"></i></span>
+                <span>Crime Map</span>
+            </a>
+        </li>
+
+        <li>
+            <a href="{% url 'ai_dashboard' %}" class="{% if request.resolver_match.url_name == 'ai_dashboard' or request.resolver_match.url_name == 'ai_command_center' %}active{% endif %}">
+                <span class="menu-icon"><i class="bi bi-bar-chart-line-fill"></i></span>
+                <span>Analytics</span>
+            </a>
+        </li>
+
+    </ul>
+
+    <div class="sidebar-footer">
+        <div class="sidebar-help">
+            <i class="bi bi-telephone-fill"></i>
+            <div>
+                <strong>Emergency?</strong>
+                <small>Helpline: 100</small>
+            </div>
+        </div>
+    </div>
+
+</div>

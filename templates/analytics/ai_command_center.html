@@ -1,0 +1,291 @@
+{% extends 'base.html' %} {% block content %}
+
+<div class="analytics-page">
+
+<div class="page-hero analytics-hero">
+  <div>
+    <span class="hero-eyebrow">AI Crime Intelligence</span>
+    <h2 class="fw-bold">AI Crime Intelligence Center</h2>
+
+    <p>
+      Real-time crime analytics, AI classification, prediction and risk
+      assessment.
+    </p>
+  </div>
+  <div>
+    <span class="badge ai-active-pill"><span class="live-dot"></span> AI Engine Active</span>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6 col-xl-3">
+    <div class="card stat-card">
+      <div class="stat-icon stat-icon-blue"><i class="bi bi-robot"></i></div>
+
+      <div><div class="stat-value">{{ ai_processed }}</div><div class="stat-label">AI Processed Cases</div></div>
+    </div>
+  </div>
+
+  <div class="col-md-6 col-xl-3">
+    <div class="card stat-card stat-card-danger">
+      <div class="stat-icon stat-icon-red"><i class="bi bi-exclamation-octagon-fill"></i></div>
+
+      <div><div class="stat-value">{{ high_risk_cases }}</div><div class="stat-label">High Risk Cases</div></div>
+    </div>
+  </div>
+
+  <div class="col-md-6 col-xl-3">
+    <div class="card stat-card stat-card-success">
+      <div class="stat-icon stat-icon-green"><i class="bi bi-check-circle-fill"></i></div>
+
+      <div><div class="stat-value">{{ solved_cases }}</div><div class="stat-label">Solved Cases</div></div>
+    </div>
+  </div>
+
+  <div class="col-md-6 col-xl-3">
+    <div class="card stat-card stat-card-info">
+      <div class="stat-icon stat-icon-teal"><i class="bi bi-geo-alt-fill"></i></div>
+
+      <div><div class="stat-value">{{ hotspot_locations }}</div><div class="stat-label">Crime Hotspots</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+<div class="col-lg-7">
+<div class="card section-card mb-4">
+  <div class="section-card-header">
+    <span><i class="bi bi-cpu me-2"></i>Crime Prediction Engine</span>
+    <span class="badge bg-primary">{{ predictions|length }} locations</span>
+  </div>
+
+  <div class="card-body p-0">
+    <div class="table-responsive">
+    <table class="table zones-table mb-0">
+      <thead>
+        <tr>
+          <th>Location</th>
+
+          <th>Risk Level</th>
+
+          <th>Prediction</th>
+
+          <th>Confidence</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for prediction in predictions %}
+
+        <tr>
+          <td><strong>{{ prediction.location }}</strong></td>
+
+          <td>
+            {% if prediction.risk == 'High' %}
+            <span class="badge risk-high">High</span>
+            {% elif prediction.risk == 'Medium' %}
+            <span class="badge risk-medium">Medium</span>
+            {% else %}
+            <span class="badge risk-low">Low</span>
+            {% endif %}
+          </td>
+
+          <td><span class="badge ai-cat">{{ prediction.category }}</span></td>
+
+          <td>
+            <div class="conf-bar"><span style="width: {{ prediction.confidence }}%"></span></div>
+            <small class="text-secondary">{{ prediction.confidence }}%</small>
+          </td>
+        </tr>
+
+        {% empty %}
+        <tr><td colspan="4" class="empty-cell"><i class="bi bi-cpu"></i><p class="mb-0">No predictions yet.</p></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="col-lg-5">
+<div class="card section-card mb-4">
+  <div class="section-card-header">
+    <span><i class="bi bi-pie-chart-fill me-2"></i>AI Crime Classification</span>
+  </div>
+
+  <div class="card-body">
+    <div class="chart-wrap">
+      <canvas id="crimeTypeChart"></canvas>
+    </div>
+    <div class="chart-legend">
+      <span><i class="dot dot-red"></i>Theft</span>
+      <span><i class="dot dot-blue"></i>Cyber Crime</span>
+      <span><i class="dot dot-amber"></i>Fraud</span>
+      <span><i class="dot dot-teal"></i>Assault</span>
+      <span><i class="dot dot-grey"></i>Other</span>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+<div class="row g-3">
+<div class="col-lg-6">
+<div class="card section-card mb-4">
+  <div class="section-card-header">
+    <span><i class="bi bi-person-badge-fill me-2"></i>Recommended Officers</span>
+    <span class="badge bg-primary">{{ recommendations|length }} officers</span>
+  </div>
+
+  <div class="card-body">
+    {% for officer in recommendations %}
+
+    <div class="officer-row">
+      <div class="officer-avatar"><i class="bi bi-person-fill"></i></div>
+      <div class="officer-info">
+        <h5>{{ officer.name }}</h5>
+        <p>Experience Score: <strong>{{ officer.score }}</strong> · Active Cases: <strong>{{ officer.active_cases }}</strong></p>
+      </div>
+      <span class="badge ai-cat">Suggested</span>
+    </div>
+
+    {% empty %}
+    <div class="empty-cell"><i class="bi bi-person-badge"></i><p class="mb-0">No recommendations yet.</p></div>
+    {% endfor %}
+  </div>
+</div>
+</div>
+
+<div class="col-lg-6">
+<div class="card section-card mb-4">
+  <div class="section-card-header">
+    <span><i class="bi bi-exclamation-triangle-fill me-2"></i>High Priority Cases</span>
+    <span class="badge bg-danger">{{ high_priority_cases|length }} urgent</span>
+  </div>
+
+  <div class="card-body">
+    {% for case in high_priority_cases %}
+
+    <div class="priority-box">
+      <strong>{{ case.title }}</strong>
+      <span class="badge risk-high">Priority: {{ case.priority }}</span>
+    </div>
+
+    {% empty %}
+    <div class="empty-cell"><i class="bi bi-check-circle"></i><p class="mb-0">No high priority cases.</p></div>
+    {% endfor %}
+  </div>
+</div>
+</div>
+</div>
+
+<div class="card map-shell mb-4">
+  <div class="map-shell-header">
+    <span><i class="bi bi-map-fill me-2"></i>Live Crime Heatmap</span>
+    <span class="badge map-live-pill"><span class="live-dot"></span>Live</span>
+  </div>
+  <div class="map-shell-body">
+    <div id="crime-map"></div>
+  </div>
+</div>
+
+<div class="card section-card">
+  <div class="section-card-header">
+    <span><i class="bi bi-graph-up me-2"></i>Classification Confidence</span>
+    <span class="badge bg-primary">{{ ai_results|length }} classified</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+    <table class="table zones-table mb-0">
+      <thead>
+        <tr>
+          <th>Complaint</th>
+
+          <th>AI Category</th>
+
+          <th>Confidence</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for item in ai_results %}
+
+        <tr>
+          <td><strong>#{{ item.id }}</strong></td>
+
+          <td><span class="badge ai-cat">{{ item.category }}</span></td>
+
+          <td>
+            <div class="conf-bar"><span style="width: {{ item.confidence }}%"></span></div>
+            <small class="text-secondary">{{ item.confidence }}%</small>
+          </td>
+        </tr>
+
+        {% empty %}
+        <tr><td colspan="3" class="empty-cell"><i class="bi bi-inbox"></i><p class="mb-0">No AI results yet.</p></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+  new Chart(document.getElementById("crimeTypeChart"), {
+    type: "doughnut",
+
+    data: {
+      labels: ["Theft", "Cyber Crime", "Fraud", "Assault", "Other"],
+
+      datasets: [
+        {
+          data: {{ crime_type_data_json|safe }},
+          backgroundColor: ["#ef4444", "#3b82f6", "#f59e0b", "#14b8a6", "#64748b"],
+          borderColor: "#0f172a",
+          borderWidth: 3,
+        },
+      ],
+    },
+
+    options: {
+      cutout: "68%",
+      plugins: { legend: { display: false } },
+    },
+  });
+</script>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+  var map = L.map("crime-map").setView([23.033863, 72.585022], 11);
+
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+  }).addTo(map);
+
+  {% for complaint in map_complaints %}
+
+  L.marker(
+  [
+  {{ complaint.latitude }},
+  {{ complaint.longitude }}
+  ]
+  )
+  .addTo(map)
+  .bindPopup(
+
+  `
+  <b>{{ complaint.tracking_id }}</b>
+  <br>
+  {{ complaint.category }} ({{ complaint.priority }} priority)
+  `
+
+  );
+
+  {% endfor %}
+</script>
+{% endblock %}

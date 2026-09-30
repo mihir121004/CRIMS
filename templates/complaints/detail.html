@@ -1,0 +1,281 @@
+{% extends 'base.html' %} {% block content %}
+
+<!-- HEADER  -->
+
+<div class="complaint-detail case-header">
+  <div>
+    <h2 class="fw-bold">Case #{{ complaint.tracking_id }}</h2>
+    <p class="text-secondary">{{ complaint.category }}</p>
+  </div>
+
+  <div>
+    {% if complaint.status == "resolved" %}
+    <span class="badge bg-success fs-6"> RESOLVED </span>
+    {% elif complaint.status == "investigation" or complaint.status == "review" or complaint.status == "evidence" %}
+    <span class="badge bg-primary fs-6"> INVESTIGATING </span>
+    {% else %}
+    <span class="badge bg-warning fs-6"> PENDING </span>
+    {% endif %}
+  </div>
+</div>
+
+<!-- CASE ACTIONS -->
+
+<div class="mt-3 d-flex gap-2 flex-wrap">
+  <a href="{% url 'fir_pdf' complaint.id %}" class="btn btn-success">
+    <i class="bi bi-file-earmark-pdf-fill"></i>
+    Download FIR
+  </a>
+  <a href="{% url 'upload_evidence' complaint.id %}" class="btn btn-danger">
+    <i class="bi bi-cloud-arrow-up"></i>
+    Upload Evidence
+  </a>
+  <a href="{% url 'complaint_chat' complaint.id %}" class="btn btn-primary">
+    <i class="bi bi-chat-dots"></i>
+    Case Chat
+  </a>
+  {% if request.user.role == 'officer' or request.user.role == 'admin' %}
+  <a href="{% url 'update_status' complaint.id %}" class="btn btn-warning">
+    <i class="bi bi-arrow-repeat"></i>
+    Update Status
+  </a>
+  {% endif %}
+  {% if request.user.role == 'admin' %}
+  <a href="{% url 'assign_officer' complaint.id %}" class="btn btn-secondary">
+    <i class="bi bi-person-plus"></i>
+    Assign Officer
+  </a>
+  {% endif %}
+</div>
+
+<!-- INVESTIGATION PROGRESS TRACKER -->
+
+<div class="card mt-4">
+  <div class="card-header">Investigation Progress</div>
+  <div class="card-body">
+    <div class="progress-tracker">
+      <div class="tracker-step active">Complaint Filed</div>
+      <div class="tracker-step {% if complaint.status == 'review' or complaint.status == 'investigation' or complaint.status == 'evidence' or complaint.status == 'resolved' %}active{% endif %}">Officer Assigned</div>
+      <div class="tracker-step {% if complaint.status == 'investigation' or complaint.status == 'evidence' or complaint.status == 'resolved' %}active{% endif %}">Investigation</div>
+      <div class="tracker-step {% if complaint.status == 'evidence' or complaint.status == 'resolved' %}active{% endif %}">Evidence Review</div>
+      <div class="tracker-step {% if complaint.status == 'resolved' %}active{% endif %}">Case Closed</div>
+    </div>
+  </div>
+</div>
+
+<!-- CASE INFORMATION CARD -->
+<div class="card mt-4">
+  <div class="card-header">Case Information</div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6">
+        <p>
+          <strong>Tracking ID:</strong>
+          {{ complaint.tracking_id }}
+        </p>
+        <p>
+          <strong>Category:</strong>
+          {{ complaint.category }}
+        </p>
+        <p>
+          <strong>Priority:</strong>
+          {{ complaint.priority }}
+        </p>
+      </div>
+      <div class="col-md-6">
+        <p>
+          <strong>Status:</strong>
+          {{ complaint.status }}
+        </p>
+        <p>
+          <strong>Created:</strong>
+          {{ complaint.created_at }}
+        </p>
+        <p>
+          <strong>AI Category:</strong>
+          {{ complaint.ai_category }}
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- OFFICER ASSISGNMENT CARD -->
+
+<div class="card mt-4">
+  <div class="card-header">Assigned Officer</div>
+
+  <div class="card-body">
+    {% if investigation.assigned_officer %}
+
+    <div class="officer-card">
+      <div class="officer-avatar">
+        {{ investigation.assigned_officer.username|first|upper }}
+      </div>
+
+      <div>
+        <h5>{{ investigation.assigned_officer.username }}</h5>
+
+        <p class="text-secondary mb-0">Investigating Officer</p>
+      </div>
+    </div>
+
+    {% else %}
+
+    <p class="text-secondary">Officer not assigned yet.</p>
+
+    {% endif %}
+  </div>
+</div>
+
+<!-- EVIDENCE GALLERY -->
+ <div class="card mt-4">
+    <div class="card-header">
+        Evidence Gallery
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for item in evidence %}
+            <div class="col-md-4 mb-3">
+                <div class="evidence-card">
+                    <i class="bi bi-file-earmark-lock-fill"></i>
+                    <h6>
+                        {{ item.file.name }}
+                    </h6>
+                    <a href="{% url 'evidence_detail' item.pk %}" class="btn btn-sm btn-primary">
+                        Details
+                    </a>
+                    {% if item.file %}
+                    <a href="{{ item.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        Open
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-secondary">No evidence uploaded yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+ </div>
+
+ <!-- SUSPECTS SECTION -->
+  <div class="card mt-4">
+    <div class="card-header">
+        Suspects
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for suspect in suspects %}
+            <div class="col-md-4">
+                <div class="person-card">
+                    <i class="bi bi-person-fill"></i>
+                    <h5>{{ suspect.full_name }}</h5>
+                    <small>
+                        {% if suspect.wanted %}
+                        <span class="badge bg-danger">Wanted</span>
+                        {% else %}
+                        Age {{ suspect.age }}
+                        {% endif %}
+                    </small>
+                    <br>
+                    <a href="{% url 'suspect_detail' suspect.id %}" class="btn btn-sm btn-outline-primary mt-2">
+                        View
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-secondary">No suspects recorded.</p>
+            {% endfor %}
+        </div>
+    </div>
+  </div>
+
+  <!-- WITNESS SECTION -->
+
+<div class="card mt-4">
+    <div class="card-header">
+        Witnesses
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for witness in witnesses %}
+            <div class="col-md-4">
+                <div class="person-card">
+                    <i class="bi bi-person-video3"></i>
+                    <h5>{{ witness.full_name }}</h5>
+                    <small>
+                        {{ witness.phone }}
+                    </small>
+                    <br>
+                    <a href="{% url 'witness_detail' witness.id %}" class="btn btn-sm btn-outline-primary mt-2">
+                        View
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-secondary">No witnesses recorded.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- INVESTIGATION TIMELINE -->
+
+<div class="card mt-4">
+    <div class="card-header">
+        Investigation Timeline
+    </div>
+    <div class="card-body">
+        {% if investigation and request.user.role == 'officer' or investigation and request.user.role == 'admin' %}
+        <form method="post" action="{% url 'add_note' investigation.pk %}" class="mb-3">
+            {% csrf_token %}
+            <div class="input-group">
+                <input type="text" name="note" placeholder="Add investigation note..." class="form-control" required>
+                <button class="btn btn-primary">
+                    Add Note
+                </button>
+            </div>
+        </form>
+        {% endif %}
+
+        {% if investigation %}
+        {% for note in investigation.timeline.all %}
+        <div class="timeline-item">
+            <strong>
+                {{ note.officer.username }}
+            </strong>
+            <br>
+            <small class="text-secondary">
+                {{ note.created_at }}
+            </small>
+            <p class="mt-2">
+                {{ note.note }}
+            </p>
+        </div>
+        <hr>
+        {% empty %}
+        <p class="text-secondary">No investigation notes yet.</p>
+        {% endfor %}
+        {% else %}
+        <p class="text-secondary">No investigation started for this case yet.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- FIR DOWNLOAD PANEL -->
+
+<div class="card mt-4">
+    <div class="card-header">
+        FIR & Reports
+    </div>
+    <div class="card-body">
+        <a href="{% url 'fir_pdf' complaint.id %}" class="btn btn-success">
+            <i class="bi bi-file-earmark-pdf-fill"></i>
+            Download FIR
+        </a>
+    </div>
+</div>
+
+
+{% endblock %}

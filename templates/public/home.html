@@ -1,0 +1,172 @@
+{% extends 'public/base_public.html' %} {% block content %}
+
+<div class="home-landing">
+  <!-- HERO -->
+  <section class="home-hero" id="hero">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-lg-6">
+           <div class="home-hero-text">
+             <span class="home-eyebrow">Digital Crime Reporting</span>
+             <h1>Protecting Communities Through Digital Crime Management</h1>
+             <p class="hero-subhead">
+               A unified, secure platform connecting citizens, officers, and
+               administrators through intelligent digital workflows.
+             </p>
+            <div class="home-hero-stats">
+              <div class="home-stat">
+                <span class="home-stat-num">24/7</span>
+                <span class="home-stat-label">Reporting Available</span>
+              </div>
+              <div class="home-stat">
+                <span class="home-stat-num">AI</span>
+                <span class="home-stat-label">Case Insights</span>
+              </div>
+              <div class="home-stat">
+                <span class="home-stat-num">100%</span>
+                <span class="home-stat-label">Secure & Encrypted</span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 d-flex flex-wrap gap-3">
+            <a href="{% url 'login' %}" class="public-btn-primary btn-lg">
+              <i class="bi bi-plus-circle me-2"></i> Report Crime
+            </a>
+            <a href="{% url 'register' %}" class="public-btn-secondary btn-lg">
+              <i class="bi bi-person-plus me-2"></i> Create Account
+            </a>
+          </div>
+        </div>
+        <div class="col-lg-6 text-center">
+          <div class="home-hero-shield">
+            <i class="bi bi-shield-lock-fill"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT IS CRIMS -->
+  <section class="home-description py-5" id="about">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-8 text-center">
+          <h2 class="desc-title">What is CRIMS?</h2>
+          <p class="desc-text">
+            The Crime Reporting & Investigation Management System is a comprehensive
+            platform that connects citizens, officers, and administrators through a
+            unified digital workflow. Report incidents instantly, track case progress
+            in real time, and leverage AI-powered insights to support faster resolution.
+          </p>
+          <div class="mt-4 d-flex flex-wrap justify-content-center gap-4">
+            <span class="desc-item">
+              <i class="bi bi-shield-check display-5 mb-2"></i>
+              <span class="d-block">Secure</span>
+            </span>
+            <span class="desc-item">
+              <i class="bi bi-speedometer2 display-5 mb-2"></i>
+              <span class="d-block">Real-time</span>
+            </span>
+            <span class="desc-item">
+              <i class="bi bi-bar-chart-line-fill display-5 mb-2"></i>
+              <span class="d-block">AI-Powered</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="home-features py-5">
+    <div class="container">
+      <h2 class="section-title text-center">Why CRIMS?</h2>
+      <p class="section-subtitle text-center mx-auto">
+        Built for modern public safety — secure, fast, and intelligent.
+      </p>
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="bi bi-shield-check"></i>
+            </div>
+            <h3>End-to-End Security</h3>
+            <p>Encrypted reporting channels and role-based access ensure sensitive case data stays protected at every stage of the workflow.</p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="bi bi-bolt-lightning"></i>
+            </div>
+            <h3>Real-Time Tracking</h3>
+            <p>Citizens monitor complaint status live as officers update cases, with instant notifications at every milestone.</p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="bi bi-brain"></i>
+            </div>
+            <h3>AI-Powered Insights</h3>
+            <p>Analytics dashboards surface trends, hotspots, and priority recommendations to help administrators act faster.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EMERGENCY -->
+  <section class="sos-section py-5" id="emergency">
+    <div class="container text-center">
+      <h2>Emergency SOS</h2>
+      <p>For emergencies, please call the police helpline:</p>
+      <div class="phone-number">100</div>
+      <a href="{% url 'login' %}" class="btn btn-light btn-lg">
+        <i class="bi bi-plus-circle me-2"></i> File a Report
+      </a>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="py-5">
+    <div class="container">
+      <h2 class="section-title text-center">How It Works</h2>
+      <p class="section-subtitle text-center mx-auto">
+        Three simple steps to report and track crime.
+      </p>
+
+      <div class="row g-4 mt-1">
+        <div class="col-md-4">
+          <div class="stat-card stat-card-info h-100">
+            <div class="stat-icon"><i class="bi bi-1-circle-fill"></i></div>
+            <div>
+              <h3>Report</h3>
+              <p>Submit complaints online with photos and evidence attachments.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="stat-card stat-card-protected h-100">
+            <div class="stat-icon"><i class="bi bi-2-circle-fill"></i></div>
+            <div>
+              <h3>Track</h3>
+              <p>Monitor your complaint status with real-time updates.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="stat-card stat-card-warning h-100">
+            <div class="stat-icon"><i class="bi bi-3-circle-fill"></i></div>
+            <div>
+              <h3>Resolve</h3>
+              <p>Officers investigate and resolve cases with AI assistance.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="logs-page">
+
+    <div class="page-hero logs-hero">
+        <div>
+            <span class="hero-eyebrow">Audit Trail</span>
+            <h2>Activity Logs</h2>
+            <p>Every action recorded across the system, newest first.</p>
+        </div>
+        <span class="badge logs-count-pill">{{ logs|length }} entr{{ logs|length|pluralize:"y,ies" }}</span>
+    </div>
+    <div class="card table-card">
+        <div class="table-responsive">
+            <table class="table logs-table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th class="text-end">Date</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>
+                            <span class="log-user">
+                                <span class="log-avatar"><i class="bi bi-person-fill"></i></span>
+                                {{ log.user }}
+                            </span>
+                        </td>
+                        <td class="log-action-cell">{{ log.action }}</td>
+                        <td class="text-end date-cell"><i class="bi bi-clock me-1"></i>{{ log.created_at|date:"d M Y, H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3">
+                            <div class="cases-empty">
+                                <i class="bi bi-journal-text"></i>
+                                <h5>No activity recorded yet</h5>
+                                <p>System actions will appear here as they happen.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

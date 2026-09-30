@@ -1,0 +1,202 @@
+{% extends 'base.html' %} {% block content %}
+
+<div class="container-fluid citizen-dash">
+  <!-- PAGE HEADER -->
+  <div class="citizen-hero">
+    <div class="citizen-hero-text">
+      <span class="citizen-greeting">My Dashboard</span>
+      <h2 class="fw-bold">Welcome back, {{ request.user.username }}</h2>
+      <p>Track your complaints and monitor investigation progress in one place.</p>
+      <div class="citizen-hero-actions">
+        <a href="{% url 'create_complaint' %}" class="btn btn-primary">
+          <i class="bi bi-plus-circle me-1"></i>
+          Report Crime
+        </a>
+        <a href="{% url 'my_complaints' %}" class="btn btn-outline-light">
+          <i class="bi bi-folder2-open me-1"></i>
+          View All Complaints
+        </a>
+      </div>
+    </div>
+    <div class="citizen-hero-shield">
+      <i class="bi bi-shield-check"></i>
+    </div>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="row g-4 mt-1">
+    <div class="col-md-6 col-xl-3">
+      <div class="stat-card stat-total">
+        <div class="stat-icon"><i class="bi bi-folder-fill"></i></div>
+        <div>
+          <h3 class="counter">{{ total_complaints }}</h3>
+          <p>Total Complaints</p>
+        </div>
+        <a href="{% url 'my_complaints' %}" class="stat-link">View all <i class="bi bi-arrow-right"></i></a>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+      <div class="stat-card stat-warning">
+        <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+          <h3 class="counter">{{ pending_count }}</h3>
+          <p>Pending Review</p>
+        </div>
+        <a href="{% url 'my_complaints' %}?status=pending" class="stat-link">View pending <i class="bi bi-arrow-right"></i></a>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+      <div class="stat-card stat-primary">
+        <div class="stat-icon"><i class="bi bi-search"></i></div>
+        <div>
+          <h3 class="counter">{{ investigating_count }}</h3>
+          <p>Under Investigation</p>
+        </div>
+        <a href="{% url 'my_complaints' %}?status=review" class="stat-link">Track cases <i class="bi bi-arrow-right"></i></a>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+      <div class="stat-card stat-success">
+        <div class="stat-icon"><i class="bi bi-check-circle-fill"></i></div>
+        <div>
+          <h3 class="counter">{{ resolved_count }}</h3>
+          <p>Resolved</p>
+        </div>
+        <a href="{% url 'my_complaints' %}?status=resolved" class="stat-link">View resolved <i class="bi bi-arrow-right"></i></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHART + QUICK ACTIONS -->
+  <div class="row g-4 mt-1">
+    <div class="col-lg-8">
+      <div class="card dash-card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-pie-chart-fill me-2"></i>Complaint Status Overview</span>
+          <span class="badge bg-primary">{{ total_complaints }} total</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap">
+            <canvas id="statusChart"></canvas>
+          </div>
+          <div class="chart-legend">
+            <span><i class="dot dot-pending"></i> Pending ({{ pending_count }})</span>
+            <span><i class="dot dot-review"></i> Investigating ({{ investigating_count }})</span>
+            <span><i class="dot dot-resolved"></i> Resolved ({{ resolved_count }})</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card dash-card h-100">
+        <div class="card-header"><i class="bi bi-lightning-charge-fill me-2"></i>Quick Actions</div>
+        <div class="card-body">
+          <div class="d-grid gap-3">
+            <a href="{% url 'create_complaint' %}" class="btn btn-primary quick-btn">
+              <i class="bi bi-plus-circle me-2"></i>New Complaint
+            </a>
+            <a href="{% url 'my_complaints' %}" class="btn btn-outline-light quick-btn">
+              <i class="bi bi-folder2-open me-2"></i>My Complaints
+            </a>
+            <a href="{% url 'notification_list' %}" class="btn btn-outline-light quick-btn">
+              <i class="bi bi-bell me-2"></i>Notifications
+            </a>
+          </div>
+          <div class="need-help">
+            <i class="bi bi-telephone-fill me-2"></i>
+            <div>
+              <strong>Emergency?</strong>
+              <p>Call the police helpline: 100</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECENT COMPLAINTS TABLE -->
+  <div class="card dash-card mt-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-clock-history me-2"></i>Recent Complaints</span>
+      <a href="{% url 'my_complaints' %}" class="btn btn-sm btn-outline-light">View All</a>
+    </div>
+
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table dash-table mb-0">
+          <thead>
+            <tr>
+              <th>Tracking ID</th>
+              <th>Category</th>
+              <th>Status</th>
+              <th>Date Filed</th>
+              <th class="text-end">Action</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for complaint in complaints %}
+            <tr>
+              <td class="fw-semibold">{{ complaint.tracking_id }}</td>
+              <td>{{ complaint.get_category_display|default:complaint.category }}</td>
+              <td>
+                {% if complaint.status == 'pending' %}
+                <span class="badge status-pending"><i class="bi bi-hourglass-split me-1"></i>{{ complaint.get_status_display }}</span>
+                {% elif complaint.status == 'resolved' or complaint.status == 'closed' %}
+                <span class="badge status-resolved"><i class="bi bi-check-circle me-1"></i>{{ complaint.get_status_display }}</span>
+                {% else %}
+                <span class="badge status-review"><i class="bi bi-search me-1"></i>{{ complaint.get_status_display }}</span>
+                {% endif %}
+              </td>
+              <td>{{ complaint.created_at|date:"d M Y" }}</td>
+              <td class="text-end">
+                <a href="{% url 'complaint_detail' complaint.id %}" class="btn btn-sm btn-primary">
+                  View<i class="bi bi-arrow-right ms-1"></i>
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center py-5 empty-state">
+                <i class="bi bi-inbox"></i>
+                <p class="mt-2 mb-3">No complaints filed yet.</p>
+                <a href="{% url 'create_complaint' %}" class="btn btn-sm btn-primary">File Your First Complaint</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ctx = document.getElementById('statusChart');
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Pending', 'Investigating', 'Resolved'],
+            datasets: [{
+                data: [{{ pending_count }}, {{ investigating_count }}, {{ resolved_count }}],
+                backgroundColor: ['#f59e0b', '#3b82f6', '#22c55e'],
+                borderColor: '#151d2b',
+                borderWidth: 4,
+                hoverOffset: 8
+            }]
+        },
+        options: {
+            cutout: '68%',
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+  </script>
+</div>
+
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends 'accounts/auth_base.html' %}
+
+{% block title %}Registration Pending — CRIMS{% endblock %}
+
+{% block auth_content %}
+
+<section class="auth-page">
+    <div class="auth-card-new">
+
+        <div class="auth-logo-box">
+            <i class="bi bi-hourglass-split"></i>
+        </div>
+
+        <h2>Registration Pending</h2>
+
+        <div class="alert alert-warning py-3">
+            {{ message }}
+        </div>
+
+        <p class="text-center text-muted">
+            You will receive an email once your registration has been approved by an admin.
+        </p>
+
+        <div class="auth-link-row">
+            <a href="{% url 'home' %}" class="btn btn-outline-secondary w-100">Back to Home</a>
+        </div>
+
+    </div>
+</section>
+
+{% endblock %}

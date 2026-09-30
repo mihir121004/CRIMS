@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container-fluid witnesses">
+
+  <div class="page-hero wp-hero">
+    <div class="wp-hero-text">
+      <span class="hero-eyebrow">Witness Record</span>
+      <h2>{% if form.instance.pk %}Edit Witness{% else %}Add New Witness{% endif %}</h2>
+      <p>{% if form.instance.pk %}Update witness information.{% else %}Enter witness details to create a new record.{% endif %}</p>
+    </div>
+    <div class="hero-icon">
+      <i class="bi bi-person-plus-fill"></i>
+    </div>
+  </div>
+
+  <div class="card form-card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>
+        <i class="bi bi-person-video3 me-2"></i>
+        {% if form.instance.pk %}Edit Witness{% else %}Add Witness{% endif %}
+      </span>
+      <a href="{% url 'witness_list' %}" class="btn btn-light btn-sm">
+        <i class="bi bi-arrow-left"></i> Back
+      </a>
+    </div>
+    <div class="card-body">
+      <form method="post">
+                {% csrf_token %}
+
+                <!-- Full Name -->
+                <div class="mb-3">
+                    <label class="form-label">
+                        <i class="bi bi-person me-1"></i> Full Name
+                    </label>
+                    <input type="text" name="full_name" value="{{ form.full_name.value|default:'' }}" class="form-control" placeholder="Enter full name" required>
+                    {% if form.full_name.errors %}
+                        <div class="text-danger small mt-1">
+                            <i class="bi bi-exclamation-circle-fill me-1"></i>{{ form.full_name.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Age & Phone row -->
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            <i class="bi bi-calendar3 me-1"></i> Age
+                        </label>
+                        <input type="number" name="age" value="{{ form.age.value|default:'' }}" class="form-control" placeholder="Age" min="1" max="120" required>
+                        {% if form.age.errors %}
+                            <div class="text-danger small mt-1">
+                                <i class="bi bi-exclamation-circle-fill me-1"></i>{{ form.age.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            <i class="bi bi-telephone me-1"></i> Phone
+                        </label>
+                        <input type="text" name="phone" value="{{ form.phone.value|default:'' }}" class="form-control" placeholder="Phone number">
+                    </div>
+                </div>
+
+                <!-- Email -->
+                <div class="mb-3">
+                    <label class="form-label">
+                        <i class="bi bi-envelope me-1"></i> Email
+                    </label>
+                    <input type="email" name="email" value="{{ form.email.value|default:'' }}" class="form-control" placeholder="email@example.com">
+                    {% if form.email.errors %}
+                        <div class="text-danger small mt-1">
+                            <i class="bi bi-exclamation-circle-fill me-1"></i>{{ form.email.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Address -->
+                <div class="mb-3">
+                    <label class="form-label">
+                        <i class="bi bi-geo-alt me-1"></i> Address
+                    </label>
+                    <textarea name="address" rows="3" class="form-control" placeholder="Full address">{{ form.address.value|default:'' }}</textarea>
+                    {% if form.address.errors %}
+                        <div class="text-danger small mt-1">
+                            <i class="bi bi-exclamation-circle-fill me-1"></i>{{ form.address.errors.0 }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Statement -->
+                <div class="mb-3">
+                    <label class="form-label">
+                        <i class="bi bi-chat-left-text me-1"></i> Statement
+                    </label>
+                    <textarea name="statement" rows="5" class="form-control" placeholder="Witness statement...">{{ form.statement.value|default:'' }}</textarea>
+                    {% if form.statement.errors %}
+                        <div class="text-danger small mt-1">
+                            <i class="bi bi-exclamation-circle-fill me-1"></i>{{ form.statement.errors.0 }}
+                        </div>
+                    {% endif %}
+                    <div class="form-text">
+                        <i class="bi bi-info-circle me-1"></i> Record the witness's account of the incident in their own words.
+                    </div>
+                </div>
+
+                <!-- Protected Witness -->
+                <div class="mb-3">
+                    <label class="form-label">
+                        <i class="bi bi-shield-lock me-1"></i> Protection Status
+                    </label>
+                    <select name="protected_witness" class="form-select">
+                        <option value="False" {% if not form.protected_witness.value or form.protected_witness.value == False %}selected{% endif %}>
+                            Standard Witness
+                        </option>
+                        <option value="True" {% if form.protected_witness.value == True %}selected{% endif %}>
+                            Protected Witness
+                        </option>
+                    </select>
+                    <div class="form-text">
+                        <i class="bi bi-info-circle me-1"></i> Protected witnesses receive additional security measures.
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="card-footer bg-transparent border-top">
+            <div class="d-flex gap-2 justify-content-end">
+                <a href="{% url 'witness_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-lg"></i> Cancel
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check2-circle me-1"></i> Save Witness
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
