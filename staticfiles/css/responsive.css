@@ -36,7 +36,9 @@ video {
 }
 
 #crime-map,
-#crimeMap {
+#crimeMap,
+#map,
+.crime-map {
   max-width: 100%;
 }
 
@@ -54,6 +56,16 @@ th,
 li,
 label {
   overflow-wrap: break-word;
+}
+
+/* Long unbroken values (IDs, emails, URLs, file paths) must never widen a
+   table cell or card past the viewport. */
+.table td,
+.table th,
+.badge,
+code,
+.mono {
+  overflow-wrap: anywhere;
 }
 
 pre,
@@ -74,6 +86,22 @@ code {
 
 .container-fluid {
   min-width: 0;
+}
+
+/* Bootstrap compensates column padding with -12px row margins, so a `.row`
+   is 24px wider than its parent. Inside `.main-content` that negative margin
+   escapes the padding box and pushes the page into horizontal scroll on
+   phones. Cancel the margin and keep the gutter as real padding instead. */
+.main-content .row,
+.public-content .row {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.main-content .row > [class*="col-"],
+.public-content .row > [class*="col-"] {
+  padding-left: 10px;
+  padding-right: 10px;
 }
 
 .sidebar-toggle {
@@ -124,7 +152,8 @@ code {
   inset: 0;
   background: rgba(2, 6, 23, 0.6);
   backdrop-filter: blur(2px);
-  z-index: 1040;
+  /* Must sit below .sidebar (z-index 1000) so the drawer stays clickable. */
+  z-index: 999;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s;
@@ -134,6 +163,24 @@ code {
   display: block;
   opacity: 1;
   pointer-events: auto;
+}
+
+/* Raise the drawer above its own overlay while it is open. */
+body.sidebar-open .sidebar {
+  z-index: 1050;
+}
+
+/* 100vh ignores mobile browser chrome; 100dvh tracks the real viewport */
+.sidebar {
+  height: 100dvh;
+  max-height: 100dvh;
+}
+
+@supports not (height: 100dvh) {
+  .sidebar {
+    height: 100vh;
+    max-height: 100vh;
+  }
 }
 
 /* ---------- 3. Top navbar ---------- */
@@ -365,16 +412,25 @@ textarea {
 /* ---------- 8. Maps ---------- */
 
 #crime-map,
+#crimeMap,
+#map,
+.crime-map,
 .map-page #crimeMap,
 .analytics-page #crime-map,
 .leaflet-container {
   height: 340px;
   min-height: 280px;
+  max-width: 100%;
 }
 
 .map-shell-body,
 .map-shell {
   max-width: 100%;
+}
+
+.pin-status {
+  font-size: 0.8rem;
+  word-break: break-word;
 }
 
 /* ---------- 9. Public pages ---------- */
@@ -547,6 +603,16 @@ textarea {
   flex-shrink: 0;
 }
 
+/* Step lines would stretch oddly once the bar scrolls; keep them short */
+.steps-bar .step-line {
+  min-width: 18px;
+  flex: 0 0 40px;
+}
+
+.steps-bar .step {
+  min-width: 0;
+}
+
 .officer-row,
 .notif-page .notification-item,
 .officer-card,
@@ -579,6 +645,30 @@ textarea {
 .evidence-card,
 .person-card,
 .evidence-gallery-card {
+  min-width: 0;
+}
+
+/* Card headers pair a label with badge/buttons — let them wrap instead of
+   squeezing the label into an unreadable column on narrow screens. */
+.card-header {
+  flex-wrap: wrap;
+  row-gap: 8px;
+  min-width: 0;
+}
+
+.card-header > * {
+  min-width: 0;
+}
+
+.card-body {
+  min-width: 0;
+}
+
+/* Button rows inside cards and forms */
+.d-flex.gap-2,
+.d-flex.gap-3,
+.d-flex.gap-4 {
+  flex-wrap: wrap;
   min-width: 0;
 }
 
@@ -768,9 +858,13 @@ textarea {
   }
 
   #crime-map,
+  #crimeMap,
+  #map,
+  .crime-map,
   .map-page #crimeMap,
   .analytics-page #crime-map {
     height: 300px;
+    min-height: 260px;
   }
 
   .public-footer-inner {
@@ -865,6 +959,20 @@ textarea {
     width: 100%;
   }
 
+  /* Ad-hoc button rows (suspect/witness forms, update status, assign
+     officer) that only carry Bootstrap utility classes */
+  .d-flex.gap-2.justify-content-end,
+  .d-flex.gap-2.justify-content-between {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .d-flex.gap-2.justify-content-end .btn,
+  .d-flex.gap-2.justify-content-between .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
   .step span:last-child,
   .progress-tracker .tracker-step span:last-child {
     display: none;
@@ -906,6 +1014,9 @@ textarea {
   }
 
   #crime-map,
+  #crimeMap,
+  #map,
+  .crime-map,
   .map-page #crimeMap,
   .analytics-page #crime-map {
     height: 260px;
@@ -1085,12 +1196,113 @@ textarea {
   }
 }
 
-/* Landscape phones — keep the app shell usable */
-@media (max-height: 520px) and (orientation: landscape) {
-  .sidebar {
-    height: 100dvh;
+/* Very narrow phones (320–380px): two-up stat cards leave ~110px of usable
+   width, which squeezes the icon and label onto separate lines. */
+@media (max-width: 380px) {
+  .main-content {
+    padding: 10px 8px;
   }
 
+  /* col-6 / col-md-* stat cards go full width */
+  .row > [class*="col-6"],
+  .row > [class*="col-md-6"] {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  .stat-card,
+  .dashboard-card,
+  .comp-stat {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .stat-icon,
+  .comp-stat-icon {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    font-size: 1.15rem;
+    border-radius: 11px;
+  }
+
+  .stat-card h3,
+  .counter {
+    font-size: 1.3rem;
+  }
+
+  .stat-card p {
+    font-size: 0.78rem;
+  }
+
+  .stat-link {
+    font-size: 0.78rem;
+  }
+
+  .page-hero,
+  .citizen-hero,
+  .comp-hero,
+  .sp-hero,
+  .wp-hero,
+  .inv-hero,
+  .ac-hero {
+    padding: 16px 14px;
+  }
+
+  .card-header,
+  .section-card-header {
+    padding: 12px 14px;
+    font-size: 0.9rem;
+  }
+
+  .card-body {
+    padding: 14px;
+  }
+
+  .hero-icon,
+  .inv-hero-icon,
+  .ac-hero-icon,
+  .officer-complaints .comp-hero-icon {
+    width: 50px;
+    height: 50px;
+    min-width: 50px;
+    font-size: 1.25rem;
+    border-radius: 14px;
+  }
+
+  .officer-complaints .comp-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .officer-row,
+  .priority-box,
+  .notif-page .notification-item {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .notif-page .notification-content h6 {
+    font-size: 0.9rem;
+  }
+
+  .app-footer-inner,
+  .public-navbar .container {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .footer-text,
+  .footer-emergency {
+    font-size: 0.75rem;
+  }
+
+  .public-footer-bottom .d-flex.gap-4 {
+    gap: 14px;
+  }
+}
+
+/* Landscape phones — keep the app shell usable */
+@media (max-height: 520px) and (orientation: landscape) {
   .chat-messages {
     max-height: 50vh;
   }
