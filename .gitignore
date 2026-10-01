@@ -1,5 +1,7 @@
 .env
 .env*
+# The checked-in template must stay visible; it holds placeholders only.
+!.env.example
 media/
 __pycache__/
 *.pyc
