@@ -35,12 +35,14 @@
           <td>{{ officer.id_number|default:"—" }}</td>
           <td>{{ officer.date_joined|date:"d M Y H:i" }}</td>
           <td class="text-end">
-            {# Root cause of the audit finding: these were plain
-               <a href> GET links with an inline onclick confirm and no CSRF
-               token, pointing at endpoints with NO authentication and NO role
-               check. Anyone - including anonymous visitors - could approve an
-               officer, and reject permanently deleted the account. Now
-               POST + CSRF, admin-only. #}
+            {% comment %}
+            Root cause of the audit finding: these were plain
+            <a href> GET links with an inline onclick confirm and no CSRF
+            token, pointing at endpoints with NO authentication and NO role
+            check. Anyone - including anonymous visitors - could approve an
+            officer, and reject permanently deleted the account. Now
+            POST + CSRF, admin-only.
+            {% endcomment %}
             <form method="post" action="{% url 'approve_officer' officer.id %}" class="d-inline">
               {% csrf_token %}
               <button type="submit" class="btn btn-sm btn-success">

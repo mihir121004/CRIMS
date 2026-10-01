@@ -99,13 +99,15 @@
             </a>
         </li>
 
-        {# Root cause of the audit finding
-           ----------------------------------
-           Activity Logs / Crime Map / Analytics sit in the block rendered for
-           every role, but these views are now law-enforcement-staff only
-           (they were previously reachable by anonymous visitors). Leaving the
-           links visible for citizens would turn every click into a 403, so
-           they are gated to match the view permissions. #}
+        {% comment %}
+        Root cause of the audit finding
+        ---------------------------------
+        Activity Logs / Crime Map / Analytics sit in the block rendered for
+        every role, but these views are now law-enforcement-staff only
+        (they were previously reachable by anonymous visitors). Leaving the
+        links visible for citizens would turn every click into a 403, so
+        they are gated to match the view permissions.
+        {% endcomment %}
         {% if request.user.role == 'officer' or request.user.role == 'admin' %}
 
         <li>

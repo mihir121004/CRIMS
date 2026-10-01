@@ -64,13 +64,15 @@
 </div>
 
 <!-- REPORTED INCIDENT CARD -->
-{# Root cause of the audit finding
-   --------------------------------------------------
-   `complaint.description`, `complaint.location`, `complaint.incident_date`
-   and `complaint.citizen` were collected, AI-tagged and map-pinned but were
-   rendered by NO template anywhere in the project. The narrative of the
-   actual crime, where it happened, when, and who filed it were never shown to
-   the officer working the case. Restored here. #}
+{% comment %}
+Root cause of the audit finding
+---------------------------------------------------
+`complaint.description`, `complaint.location`, `complaint.incident_date`
+and `complaint.citizen` were collected, AI-tagged and map-pinned but were
+rendered by NO template anywhere in the project. The narrative of the
+actual crime, where it happened, when, and who filed it were never shown to
+the officer working the case. Restored here.
+{% endcomment %}
 <div class="card mt-4">
   <div class="card-header">
     <i class="bi bi-file-earmark-text me-2"></i>Reported Incident
