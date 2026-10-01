@@ -17,11 +17,55 @@ Status legend: `[x]` done · `[ ]` outstanding
       Provision a bucket and set the env vars below. The backend is already
       wired via `MEDIA_STORAGE` in `crims/settings.py`.
 
-- [ ] **Gmail OAuth refresh token.** The local token returns HTTP 401. A
-      failure no longer 500s registration (fixed and tested), but no email
-      can be delivered, so no user can complete email verification and no
-      password reset can work. Registration now fails loudly with a form
-      error rather than silently.
+- [ ] **Verification email — BLOCKING (2026-10-01).** Production cannot send
+      any email, so registration always fails with "We could not send the
+      verification email" and the new account is rolled back. No OTP is ever
+      issued, so `/verify-email/` has nothing to verify. Nobody can use the
+      site until this is fixed.
+
+      Original cause: `GMAIL_REFRESH_TOKEN` is dead. Google answers
+      `invalid_grant: Token has been expired or revoked`, and since the client
+      *is* recognised, the OAuth client itself is still valid. (The local
+      `.env` copy is separately unusable — it returns `invalid_client`.)
+
+      Two routes out, both needing browser/console work that cannot be done
+      from the CLI because the credentials are write-only Vercel secrets:
+
+      **A. Gmail app password over plain SMTP — chosen 2026-10-01.** Set
+      `EMAIL_HOST_PASSWORD` in Vercel (production) to a Google *app
+      password* from https://myaccount.google.com/apppasswords (requires
+      2-Step Verification), and set:
+
+      ```
+      EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+      ```
+
+      `EMAIL_BACKEND` is now honoured explicitly by `crims/settings.py`.
+      This matters: the alternative way to reach the SMTP backend was to
+      delete `GMAIL_OAUTH_CLIENT_ID`, and because Vercel secrets cannot be
+      read back, deleting one is a one-way door. Naming the transport is
+      reversible. The dead OAuth credentials can be left in place.
+
+      **B. Renew the OAuth refresh token** with
+      `python scripts/renew_gmail_token.py`. The OAuth client is type *Web
+      application*, so the out-of-band redirect is rejected; it needs
+      `https://crims-eta.vercel.app/oauth-callback` registered under
+      Authorized redirect URIs first. If used, the consent screen's
+      publishing status **must** be "In production", because refresh tokens
+      issued while it reads "Testing" expire after 7 days.
+
+      Confirm delivery afterwards by registering a throwaway account and
+      looking for this line in `vercel logs`:
+
+      ```
+      verification email to ***@... accepted by the mail provider (purpose=verify)
+      ```
+
+      That line means Gmail accepted the message. It does **not** prove inbox
+      delivery — spam filtering after acceptance is invisible to this code.
+
+      **Do not delete the `GMAIL_*` variables** unless you intend route B to
+      be unrecoverable.
 
 ## 2. Environment variables
 
@@ -37,6 +81,7 @@ Set in Vercel production:
 | `GMAIL_OAUTH_CLIENT_ID` / `GMAIL_CLIENT_SECRET` / `GMAIL_REFRESH_TOKEN` | [x] set | Token expired — see blocker 1 |
 | `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` | [x] set | |
 | `CSRF_TRUSTED_ORIGINS` | [x] added | `https://crims-eta.vercel.app` |
+| `CRON_SECRET` | [x] set | Bearer token for `POST /internal/migrate/`. Stored as a Vercel *secret*, so it cannot be read back from the dashboard — the only copy is in `.env.cron-secret` (gitignored). **Move it to a password manager, then delete that file.** |
 | `MEDIA_STORAGE` | [ ] **missing** | Required — see blocker 1 |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_STORAGE_BUCKET_NAME` | [ ] **missing** | Required if using S3 |
 
@@ -52,9 +97,62 @@ python -c "from django.core.management.utils import get_random_secret_key as g; 
 - [x] `manage.py check` — no issues
 - [x] `manage.py check --deploy` — no warnings
 - [x] `collectstatic` run; `staticfiles/` committed (132 files, 396 post-processed)
-- [x] 105 tests passing
+- [x] 131 tests passing
 - [x] No hardcoded secrets in the tree
-- [x] Working tree clean at `b88cf14`
+- [ ] Working tree is **dirty** — the migration-route work below is applied
+      to production but not yet committed.
+
+## 3a. Applying migrations to production
+
+**This is required after any deploy that adds a migration.** Vercel has no
+release phase and no shell, so deploying does *not* update the schema.
+
+Incident, 2026-10-01: four migrations had been applied to the local database
+only. `POST /login/` returned HTTP 500 with
+`Unknown column 'accounts_user.otp_salt' in 'field list'` — `GET /login/`
+still worked because it never queries that table, which is why the outage was
+invisible until someone tried to sign in.
+
+The database is **TiDB**, which rejects the single-statement form Django's
+MySQL backend uses to add a foreign key column:
+
+```
+ALTER TABLE evidence ADD COLUMN uploaded_by_id bigint NULL,
+  ADD CONSTRAINT ... FOREIGN KEY (uploaded_by_id) REFERENCES accounts_user (id)
+-- (1072, "Key column 'uploaded_by_id' doesn't exist in table")
+```
+
+`crims/schema_ops.py` provides `SplitForeignKeyAddField`, which forces Django
+down its deferred-constraint path and then waits for the new column to become
+visible in `information_schema`, because TiDB publishes DDL asynchronously.
+Any future migration that adds a FK column to a **new** column must use it.
+
+Check for drift (read-only, safe at any time):
+
+```bash
+SECRET=$(cat .env.cron-secret)
+curl -s -H "Authorization: Bearer $SECRET" \
+  https://crims-eta.vercel.app/internal/migrate/
+# {"status": "up-to-date", "applied": []}
+```
+
+Apply pending migrations (POST; each migration is its own transaction, so an
+interrupted run can simply be repeated):
+
+```bash
+curl -s -X POST -H "Authorization: Bearer $SECRET" \
+  https://crims-eta.vercel.app/internal/migrate/
+```
+
+The route is `csrf_exempt` on purpose — its authority is the bearer header, not
+a cookie, so there is nothing for CSRF to protect. Without the exemption the
+`curl` above fails with a 403. See `MigrationRouteTests` in
+`accounts/test_auth_flows.py`.
+
+**There is no pre-migration backup.** The production `DATABASE_URL` is a
+Vercel secret and cannot be read from the CLI, so `mysqldump` against the live
+database is not currently possible from a workstation. Take a provider-level
+snapshot before large schema changes until that changes.
 
 ## 4. Security settings (verified active with `DEBUG=False`)
 
@@ -93,6 +191,10 @@ python -c "from django.core.management.utils import get_random_secret_key as g; 
 - [x] `django.request` logs 4xx/5xx
 - [x] `crims.errors` logs permission denials and unhandled errors with a
       reference ID shown to the user on the 500 page
+- [x] Failed verification emails are logged with the provider's error code
+      and a redacted recipient (`accounts/utils.py`). Before this, a mail
+      outage was indistinguishable from a user not receiving mail — which is
+      how the current outage went undiagnosed.
 - [x] `GET /health/` — returns `{"status":"ok","database":true}`; 503 if the
       database is unreachable. Point uptime monitoring at it.
 - [ ] Point external monitoring at `/health/` (not yet configured)
@@ -112,6 +214,18 @@ done
 # These must be 200
 curl -s -o /dev/null -w "%{http_code} /\n"    https://crims-eta.vercel.app/
 curl -s https://crims-eta.vercel.app/health/
+
+# Login must render a form error, not a 500. The GET alone proves nothing,
+# because only the POST path queries accounts_user.
+curl -s -c /tmp/cj -o /dev/null https://crims-eta.vercel.app/login/
+CSRF=$(grep csrftoken /tmp/cj | awk '{print $7}')
+curl -s -b /tmp/cj -o /tmp/post.html -w "%{http_code}\n" \
+  -X POST -e https://crims-eta.vercel.app/login/ \
+  -d "csrfmiddlewaretoken=$CSRF" -d "username=__nobody__" -d "password=wrong" \
+  https://crims-eta.vercel.app/login/
+# expect 200, and the body to contain "correct username and password"
+grep -q "correct username and password" /tmp/post.html && echo "login ok"
+rm -f /tmp/cj /tmp/post.html
 ```
 
 Then run the suite:
