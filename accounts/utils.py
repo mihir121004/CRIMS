@@ -16,7 +16,10 @@ hand an attacker valid codes.
 
 import hashlib
 import hmac
+import json
+import logging
 import secrets
+import urllib.error
 from datetime import timedelta
 
 from django.conf import settings
@@ -31,6 +34,41 @@ OTP_TTL = timedelta(minutes=15)
 #: satisfy email verification, and vice versa.
 OTP_PURPOSE_VERIFY = 'verify'
 OTP_PURPOSE_RESET = 'reset'
+
+logger = logging.getLogger('crims.errors')
+
+
+def _redact(email):
+    """Reduce an address to something safe to write to a log.
+
+    The local part is the identifying half, and mail failures are the one
+    place a real user's address would otherwise end up in the log store.
+    """
+    if not email or '@' not in email:
+        return 'unknown'
+    local, _, domain = email.partition('@')
+    return '{}***@{}'.format(local[:2], domain)
+
+
+def _describe_mail_error(exc):
+    """Summarise a mail failure without echoing credentials.
+
+    Google's OAuth endpoint returns a short JSON body identifying the problem
+    (``invalid_grant``, ``invalid_client``, ...) and that is the difference
+    between an expired refresh token and a revoked one, so it is worth
+    keeping. Everything else falls back to the exception type alone.
+    """
+    if isinstance(exc, urllib.error.HTTPError):
+        detail = ''
+        try:
+            body = json.loads(exc.read().decode() or '{}')
+            error = body.get('error', '')
+            description = body.get('error_description', '')
+            detail = ' {}: {}'.format(error, description) if error else ''
+        except Exception:
+            detail = ''
+        return 'HTTP {} from the mail provider{}'.format(exc.code, detail)
+    return type(exc).__name__
 
 
 def generate_otp():
@@ -108,11 +146,24 @@ def send_otp_email(user, purpose=OTP_PURPOSE_VERIFY):
             recipient_list=[user.email],
             fail_silently=False,
         )
+        # Logged at INFO so "was it sent?" is answerable from the log stream.
+        # send_mail returning without raising means the provider accepted the
+        # message, which is as far as this code can verify - it cannot confirm
+        # inbox delivery.
+        logger.info(
+            'verification email to %s accepted by the mail provider '
+            '(purpose=%s)', _redact(user.email), purpose,
+        )
         return True
-    except Exception:
-        # Logged by the caller; a failed send must not abort registration.
+    except Exception as exc:
+        # Swallowed deliberately so a mail outage cannot 500 signup - but it
+        # must not vanish silently either, or an expired OAuth token looks
+        # identical to "no email arrived" from the outside.
+        logger.error(
+            'verification email to %s failed: %s', _redact(user.email),
+            _describe_mail_error(exc),
+        )
         return False
-
 
 def admin_required(view_func=None):
     """Allow access only to users with role 'admin'.

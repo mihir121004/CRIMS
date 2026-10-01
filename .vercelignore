@@ -1,4 +1,6 @@
 .env
+.env*
+*.local
 media/
 __pycache__/
 *.pyc
@@ -11,3 +13,4 @@ contrast_audit.json
 ui_audit.json
 .vercel
 migrations_backup/
+scripts/

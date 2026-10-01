@@ -214,12 +214,30 @@ EMAIL_VERIFICATION_REQUIRED = os.environ.get(
     "EMAIL_VERIFICATION_REQUIRED", "true"
 ).lower() in ("1", "true", "yes", "on")
 
-if os.environ.get('GMAIL_OAUTH_CLIENT_ID') and os.environ.get('GMAIL_REFRESH_TOKEN'):
-    EMAIL_BACKEND = 'accounts.email_backend.GmailOAuthBackend'
-elif EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-else:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+def _auto_email_backend():
+    """Pick a transport from whichever credentials happen to be present."""
+    if os.environ.get('GMAIL_OAUTH_CLIENT_ID') and os.environ.get(
+        'GMAIL_REFRESH_TOKEN'
+    ):
+        return 'accounts.email_backend.GmailOAuthBackend'
+    if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+        return 'django.core.mail.backends.smtp.EmailBackend'
+    return 'django.core.mail.backends.console.EmailBackend'
+
+
+# An explicit EMAIL_BACKEND wins over the guess above.
+#
+# This exists because the OAuth credentials are Vercel *secrets*: they cannot
+# be read back, so deleting one to force a different transport is a one-way
+# door. Naming the transport outright makes the choice reversible and
+# reviewable. Gmail's OAuth refresh token also expires, and this is how the
+# deployment is moved off it without deleting anything.
+def _resolve_email_backend(explicit):
+    """An explicit EMAIL_BACKEND wins over the automatic guess."""
+    return (explicit or '').strip() or _auto_email_backend()
+
+
+EMAIL_BACKEND = _resolve_email_backend(os.environ.get('EMAIL_BACKEND'))
 
 # MAILERS = {
 #     'default': {
