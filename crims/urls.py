@@ -19,8 +19,9 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+from . import error_views
+
 urlpatterns = [
-    path('admin/', admin.site.urls),
     path('', include('accounts.urls')),
     path('complaints/', include('complaints.urls')),
     path('evidence/', include('evidence.urls')),
@@ -30,9 +31,21 @@ urlpatterns = [
     path('suspects/', include('suspects.urls')),
     path('witnesses/', include('witnesses.urls')),
     path('investigations/', include('investigations.urls')),
-    path('chat/', include('communications.urls'),)
+    path('chat/', include('communications.urls')),
 
+    # Kept last: Django's admin must only be reachable by staff accounts.
+    path('admin/', admin.site.urls),
 ]
+
+# Root cause of the audit finding
+# -------------------------------
+# The admin site was registered FIRST, before the app includes. Django's admin
+# has its own staff-only checks so this was not directly exploitable, but a
+# login-required page should never be shadowed by another route pattern.
+
+handler403 = 'crims.error_views.permission_denied'
+handler404 = 'crims.error_views.page_not_found'
+handler500 = 'crims.error_views.server_error'
 
 if settings.DEBUG:
     urlpatterns += static(

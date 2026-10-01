@@ -35,12 +35,25 @@
           <td>{{ officer.id_number|default:"—" }}</td>
           <td>{{ officer.date_joined|date:"d M Y H:i" }}</td>
           <td class="text-end">
-            <a href="{% url 'approve_officer' officer.id %}" class="btn btn-sm btn-success" onclick="return confirm('Approve {{ officer.username }}?')">
-              <i class="bi bi-check-lg"></i> Approve
-            </a>
-            <a href="{% url 'reject_officer' officer.id %}" class="btn btn-sm btn-danger" onclick="return confirm('Reject {{ officer.username }}?')">
-              <i class="bi bi-x-lg"></i> Reject
-            </a>
+            {# Root cause of the audit finding: these were plain
+               <a href> GET links with an inline onclick confirm and no CSRF
+               token, pointing at endpoints with NO authentication and NO role
+               check. Anyone - including anonymous visitors - could approve an
+               officer, and reject permanently deleted the account. Now
+               POST + CSRF, admin-only. #}
+            <form method="post" action="{% url 'approve_officer' officer.id %}" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-success">
+                <i class="bi bi-check-lg"></i> Approve
+              </button>
+            </form>
+            <form method="post" action="{% url 'reject_officer' officer.id %}" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-danger"
+                      onclick="return confirm('Reject {{ officer.username }}? This deactivates their account.')">
+                <i class="bi bi-x-lg"></i> Reject
+              </button>
+            </form>
           </td>
         </tr>
         {% endfor %}

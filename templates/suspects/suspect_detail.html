@@ -67,9 +67,23 @@
             Back to Suspects
           </a>
           {% if suspect.wanted %}
-          <a href="{% url 'suspect_detail' suspect.id %}?clear" class="btn btn-success">
-            <i class="bi bi-check2-circle"></i> Mark Cleared
-          </a>
+          <!-- Root cause of the audit finding: this was
+               <a href="...?clear">, a GET link no view ever read, so it
+               re-rendered the page with the WANTED badge still showing.
+               Now a real POST + CSRF action that persists the change. -->
+          <form method="post" action="{% url 'clear_suspect' suspect.id %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success">
+              <i class="bi bi-check2-circle"></i> Mark Cleared
+            </button>
+          </form>
+          {% else %}
+          <form method="post" action="{% url 'toggle_wanted' suspect.id %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger">
+              <i class="bi bi-exclamation-triangle"></i> Mark Wanted
+            </button>
+          </form>
           {% endif %}
         </div>
       </div>

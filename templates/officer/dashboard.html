@@ -167,12 +167,21 @@
               <td>{{ case.get_category_display|default:case.category }}</td>
 
               <td>
-                {% if case.status == 'pending' or case.status == 'Under Review' %}
+                {# Root cause of the audit finding: the chain compared the
+                   stored value against the *display label* 'Under Review',
+                   but STATUS_CHOICES stores 'review'. Cases in review fell
+                   through to the else branch and rendered with the green
+                   "resolved" badge while still reading "Under Review" - an
+                   officer was told an open case was closed. Compare against
+                   the stored codes. #}
+                {% if case.status == 'pending' or case.status == 'review' %}
                 <span class="badge status-pending">{{ case.get_status_display|default:case.status }}</span>
                 {% elif case.status == 'investigation' or case.status == 'evidence' %}
                 <span class="badge status-review">{{ case.get_status_display|default:case.status }}</span>
-                {% else %}
+                {% elif case.status == 'resolved' %}
                 <span class="badge status-resolved">{{ case.get_status_display|default:case.status }}</span>
+                {% else %}
+                <span class="badge status-pending">{{ case.get_status_display|default:case.status }}</span>
                 {% endif %}
               </td>
 

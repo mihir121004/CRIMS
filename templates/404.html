@@ -1,0 +1,24 @@
+{% extends "public/base_public.html" %}
+{% block title %}Page not found &middot; CRIMS{% endblock %}
+{% block content %}
+<div class="container py-5 text-center" style="min-height:60vh;display:flex;align-items:center;justify-content:center;">
+  <div>
+    <div style="font-size:4rem;line-height:1;">
+      <i class="bi bi-compass" style="color:var(--accent);"></i>
+    </div>
+    <h1 class="mt-3" style="font-size:1.75rem;">Page not found</h1>
+    <p style="color:var(--text-muted);max-width:34rem;margin:0 auto;">
+      The page you requested does not exist, or you do not have permission to
+      view it. If you followed a link, return to your dashboard.
+    </p>
+    <div class="d-flex gap-2 justify-content-center mt-4" style="flex-wrap:wrap;">
+      <a href="{% url 'home' %}" class="btn btn-outline-secondary">Home</a>
+      {% if user.is_authenticated %}
+      <a href="{% url 'dashboard' %}" class="btn btn-primary">My dashboard</a>
+      {% else %}
+      <a href="{% url 'login' %}" class="btn btn-primary">Sign in</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

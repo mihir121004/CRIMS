@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
+from django.db import transaction
+from django.views.decorators.http import require_POST
 
 from .models import (
     Investigation,
@@ -10,14 +11,24 @@ from .models import (
 
 from complaints.models import Complaint
 from accounts.models import User
-from accounts.utils import admin_required
+from accounts.permissions import (
+    admin_required,
+    can_modify_investigation,
+    staff_required,
+    visible_investigations,
+)
 from notifications.utils import create_notification
 
 
-@login_required
+@staff_required
 def investigation_list(request):
+    """Was `@login_required` only - any citizen could list every internal
+    investigation in the system. Officers now see their own assignments,
+    admins see everything."""
 
-    investigations = Investigation.objects.select_related(
+    base = visible_investigations(request.user)
+
+    investigations = base.select_related(
         'complaint',
         'assigned_officer'
     ).order_by('-started_at')
@@ -59,17 +70,17 @@ def investigation_list(request):
 
         'investigations': investigations,
 
-        'total_count': Investigation.objects.count(),
+        'total_count': base.count(),
 
-        'active_count': Investigation.objects.filter(
+        'active_count': base.filter(
             complaint__status__in=['review', 'investigation', 'evidence']
         ).count(),
 
-        'assigned_count': Investigation.objects.filter(
+        'assigned_count': base.filter(
             assigned_officer__isnull=False
         ).count(),
 
-        'unassigned_count': Investigation.objects.filter(
+        'unassigned_count': base.filter(
             assigned_officer__isnull=True
         ).count(),
 
@@ -86,11 +97,13 @@ def investigation_list(request):
     )
 
 
-@login_required
+@staff_required
 def investigation_detail(request, pk):
+    """Object-level scoping: resolved through `visible_investigations` so an
+    officer cannot read another officer's case by guessing an id."""
 
     investigation = get_object_or_404(
-        Investigation,
+        visible_investigations(request.user),
         pk=pk
     )
 
@@ -135,18 +148,29 @@ def assign_officer(request, complaint_id):
             complaint=complaint
         )
 
-        previous_officer = investigation.assigned_officer
-        investigation.assigned_officer = officer
-        investigation.save()
+        # Serialise the read-modify-write on the workload counters; the
+        # original unlocked version lost increments under concurrency.
+        with transaction.atomic():
+            previous_officer = investigation.assigned_officer
+            investigation.assigned_officer = officer
+            investigation.save()
+
+            if previous_officer != officer:
+                if (
+                    previous_officer
+                    and previous_officer.current_case_count > 0
+                ):
+                    User.objects.filter(
+                        id=previous_officer.id
+                    ).update(
+                        current_case_count=previous_officer.current_case_count - 1
+                    )
+
+                User.objects.filter(id=officer.id).update(
+                    current_case_count=officer.current_case_count + 1
+                )
 
         if previous_officer != officer:
-            if previous_officer and previous_officer.current_case_count > 0:
-                previous_officer.current_case_count -= 1
-                previous_officer.save(update_fields=['current_case_count'])
-
-            officer.current_case_count += 1
-            officer.save(update_fields=['current_case_count'])
-
             create_notification(
                 officer,
                 'Case Assigned',
@@ -177,52 +201,50 @@ def assign_officer(request, complaint_id):
     )
 
 
-@login_required
+@staff_required
+@require_POST
 def add_note(request, pk):
+    """Root cause of the audit finding
+    --------------------------------
+    This had only `@login_required`, so a citizen could append text to any
+    case's timeline. Because `officer=request.user` was stored unconditionally,
+    those notes were filed in the officer's name - forging the evidentiary
+    audit trail. Notes are now staff-only, restricted to the assigned officer
+    (admins excepted), and recorded through the same `can_modify_investigation`
+    guard as the rest of the case.
+    """
 
     investigation = get_object_or_404(
-        Investigation,
+        visible_investigations(request.user),
         pk=pk
     )
 
-    if request.method == 'POST':
-
-        note_text = request.POST.get(
-            'note'
+    if not can_modify_investigation(request.user, investigation):
+        messages.error(
+            request, 'You are not assigned to this case.'
         )
+        return redirect('investigation_detail', pk=pk)
 
-        if note_text:
-
-            InvestigationNote.objects.create(
-
-                investigation=investigation,
-
-                officer=request.user,
-
-                note=note_text
-
-            )
-
-            messages.success(
-                request,
-                "Note added successfully."
-            )
-
-        return redirect(
-            'investigation_detail',
-            pk=pk
+    note_text = (request.POST.get('note') or '').strip()
+    if not note_text:
+        messages.error(request, 'The note cannot be empty.')
+    elif len(note_text) > 5000:
+        messages.error(request, 'The note is too long (5000 characters max).')
+    else:
+        InvestigationNote.objects.create(
+            investigation=investigation,
+            officer=request.user,
+            note=note_text,
         )
+        messages.success(request, 'Note added successfully.')
 
-    return redirect(
-        'investigation_detail',
-        pk=pk
-    )
+    return redirect('investigation_detail', pk=pk)
 
 
-@login_required
+@staff_required
 def my_assigned_cases(request):
 
-    mine = Investigation.objects.filter(
+    mine = visible_investigations(request.user).filter(
         assigned_officer=request.user
     )
 

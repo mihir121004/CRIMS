@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 
 from accounts.models import User
-from accounts.utils import admin_required
+from accounts.permissions import admin_required, staff_required
 from complaints.models import Complaint
 from investigations.models import Investigation
 
@@ -130,6 +130,7 @@ def admin_dashboard(request):
 
     return render(request, 'admin_panel/dashboard.html', context)
 
+@staff_required
 def crime_map(request):
     complaints = Complaint.objects.exclude(
         latitude__isnull=True
@@ -214,6 +215,7 @@ def crime_map(request):
         'hotspot_zones': hotspot_zones
     })
 
+@staff_required
 def ai_dashboard(request):
     complaints = Complaint.objects.all().order_by('-created_at')
     return render(request, 'analytics/ai_dashboard.html', 
@@ -224,6 +226,7 @@ def ai_dashboard(request):
                       'category_count': complaints.values('ai_category').distinct().count(),
                   })
 
+@staff_required
 def ai_command_center(request):
 
     complaints = Complaint.objects.all()

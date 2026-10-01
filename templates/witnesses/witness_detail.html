@@ -78,9 +78,22 @@
               Back to Witnesses
             </a>
             {% if witness.protected_witness %}
-            <a href="{% url 'witness_detail' witness.id %}?status=standard" class="btn btn-warning">
-              <i class="bi bi-shield-check"></i> Change Protection
-            </a>
+            <!-- Root cause of the audit finding: this was
+                 <a href="...?status=standard">, a GET link no view ever read,
+                 so protection status could never actually be changed. -->
+            <form method="post" action="{% url 'toggle_protection' witness.id %}" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-warning">
+                <i class="bi bi-shield-check"></i> Change Protection
+              </button>
+            </form>
+            {% else %}
+            <form method="post" action="{% url 'toggle_protection' witness.id %}" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-warning">
+                <i class="bi bi-shield-exclamation"></i> Make Protected
+              </button>
+            </form>
             {% endif %}
           </div>
         </div>

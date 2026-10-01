@@ -13,3 +13,6 @@ ui_audit.json
 smoke_tests.py
 CRIMS_source_code.md
 .DS_Store
+.coverage
+htmlcov/
+.pytest_cache/

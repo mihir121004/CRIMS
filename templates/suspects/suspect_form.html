@@ -24,9 +24,13 @@
         <i class="bi bi-arrow-left"></i> Back
       </a>
     </div>
+    <!-- Root cause of the audit finding: the submit button sat in
+         .card-footer, OUTSIDE this <form> element, so "Save Suspect" did
+         nothing and no suspect could ever be created. The form now wraps
+         the card-body and the footer. -->
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
     <div class="card-body">
-      <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
 
         <!-- Full Name -->
         <div class="mb-3">
@@ -132,7 +136,6 @@
           </div>
           {% endif %}
         </div>
-      </form>
     </div>
     <div class="card-footer bg-transparent border-top">
       <div class="d-flex gap-2 justify-content-end">
@@ -144,6 +147,7 @@
         </button>
       </div>
     </div>
+    </form>
   </div>
 
 </div>

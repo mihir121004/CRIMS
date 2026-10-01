@@ -14,6 +14,8 @@ import os
 import sys
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -30,7 +32,33 @@ if _dotenv_path.exists():
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
-SECRET_KEY = os.environ.get('SECRET_KEY', 'YPuiwgCed1yKyscRvkWJZepZGPh9jx6HejX4O2qhMyLTJdddmM7P3Od9ZIU9Hou2')
+def _require_secret_key():
+    """Root cause of the audit finding
+    ---------------------------------
+    SECRET_KEY previously fell back to a hard-coded literal that was committed
+    to git. Anyone with read access to the repository could forge session
+    cookies, password-reset tokens and any signed value, and rotating the key
+    never invalidated anything because the committed fallback kept working.
+
+    The application now refuses to boot without an explicit secret.
+    """
+    key = os.environ.get('SECRET_KEY')
+    if key:
+        return key
+
+    # In tests Django supplies its own throwaway key.
+    if 'test' in sys.argv:
+        return 'django-insecure-test-only-secret-key'
+
+    raise ImproperlyConfigured(
+        'SECRET_KEY is not set. Generate one with:\n'
+        '    python -c "from django.core.management.utils import '
+        'get_random_secret_key; print(get_random_secret_key())"\n'
+        'and add it to your environment (Vercel env var, .env, or CI secret).'
+    )
+
+
+SECRET_KEY = _require_secret_key()
 
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
@@ -204,3 +232,146 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# ---------------------------------------------------------------------------
+# Logging (added: LOGGING was `{}`, so production errors were invisible)
+# ---------------------------------------------------------------------------
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {name} {message}',
+            'style': '{',
+        },
+        'plain': {
+            'format': '{levelname} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': os.environ.get('LOG_LEVEL', 'INFO'),
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            # Records 4xx/5xx (including PermissionDenied) with a stack trace.
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.security': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'crims': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
+
+# ---------------------------------------------------------------------------
+# Upload limits (added: no per-file cap existed on any FileField)
+# ---------------------------------------------------------------------------
+
+# 25 MB is the largest accepted evidence file; the global ceiling is set a
+# little higher to leave room for multipart framing.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 26 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
+
+# ---------------------------------------------------------------------------
+# Email resilience
+# ---------------------------------------------------------------------------
+
+# Root cause of the production outage found in the audit: the Gmail OAuth
+# refresh token expired (HTTP 401), and `send_otp_email` let the exception
+# escape, so `POST /register/` returned HTTP 500 *and* left an orphaned,
+# un-verifiable user row behind. accounts.utils.send_otp_email now catches
+# delivery failures and the register view surfaces a form error instead.
+EMAIL_FAIL_SILENTLY = False
+
+# ---------------------------------------------------------------------------
+# Session / cookie hardening
+# ---------------------------------------------------------------------------
+
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+# Age out idle sessions so an unattended police workstation does not keep a
+# live session indefinitely.
+SESSION_COOKIE_AGE = 60 * 60 * 8
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# ---------------------------------------------------------------------------
+# Media storage
+# ---------------------------------------------------------------------------
+#
+# Root cause of the production finding
+# -----------------------------------
+# `MEDIA_ROOT` is the local filesystem, and Vercel's filesystem is ephemeral
+# and read-only outside the build. `/media/` returned 404 in production, so
+# evidence uploads, suspect photos and ID documents were all unreachable.
+#
+# On Vercel the project must use a real object store. Set MEDIA_STORAGE to
+# django-storages S3 (or any django-storages backend) via the environment; it
+# is configured below and activated automatically when MEDIA_STORAGE is set.
+# Locally it falls back to the filesystem.
+
+# The hashed manifest backend needs a populated staticfiles/ directory, which
+# does not exist during `manage.py test`, so tests fall back to plain static
+# storage (otherwise every {% static %} raises "Missing staticfiles manifest").
+_RUNNING_TESTS = 'test' in sys.argv
+
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': (
+            'django.contrib.staticfiles.storage.StaticFilesStorage'
+            if DEBUG or _RUNNING_TESTS
+            else 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+        ),
+    },
+}
+
+if os.environ.get('MEDIA_STORAGE'):
+    STORAGES['default'] = {'BACKEND': os.environ['MEDIA_STORAGE']}
+
+
+# ---------------------------------------------------------------------------
+# CSRF trusted origins
+# ---------------------------------------------------------------------------
+#
+# Behind Vercel the request Host is the deployment domain. Django compares the
+# Origin header against this list; without it, every POST is rejected with 403
+# on a custom domain. Comma-separated via the environment, e.g.
+#   CSRF_TRUSTED_ORIGINS=https://crims.example.com,https://crims-eta.vercel.app
+_extra_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in _extra_origins.split(',')
+    if origin.strip()
+]
+
+# ---------------------------------------------------------------------------
+# Health check
+# ---------------------------------------------------------------------------
+# Used by the deployment checklist / uptime monitoring. Reports only whether
+# the database answers - never any configuration detail.

@@ -1,5 +1,7 @@
 from django.db import models
 
+from accounts.validators import suspect_photo_path
+
 class Suspect(models.Model):
 
     GENDER_CHOICES = (
@@ -12,11 +14,19 @@ class Suspect(models.Model):
 
     age = models.PositiveIntegerField()
 
-    complaint = models.ForeignKey('complaints.Complaint', on_delete=models.CASCADE) 
+    complaint = models.ForeignKey(
+        'complaints.Complaint', on_delete=models.CASCADE
+    )
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['wanted']),
+            models.Index(fields=['complaint']),
+        ]
 
     gender = models.CharField(max_length=20, choices=GENDER_CHOICES)
 
-    photo = models.ImageField(upload_to='suspects/', blank=True, null=True)
+    photo = models.ImageField(upload_to=suspect_photo_path, blank=True, null=True)
 
     address = models.TextField()
 

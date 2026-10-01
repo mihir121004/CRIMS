@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 
 from .models import User
+from .validators import validate_uploaded_id_document
 
 
 AUTH_PLACEHOLDERS = {
@@ -39,13 +40,30 @@ class RegisterForm(CrimsStyleMixin, UserCreationForm):
     id_number = forms.CharField(required=False, max_length=50)
     id_document = forms.FileField(required=False)
 
+    #: Roles a member of the public is ever allowed to pick for themselves.
+    #: ``admin`` is deliberately absent - self-registering as an administrator
+    #: was the privilege-escalation bug found in the audit.
+    SELF_SERVICE_ROLES = (
+        ('citizen', 'Citizen'),
+        ('officer', 'Officer'),
+    )
+
+    role = forms.ChoiceField(
+        choices=SELF_SERVICE_ROLES,
+        initial='citizen',
+        help_text='Select Officer only if you are registering as law enforcement.',
+    )
+
     class Meta:
         model = User
 
+        # 'role' is intentionally NOT in this list. It is declared above as a
+        # ChoiceField so the field is rendered and validated, but the model
+        # default ('citizen') is applied unless the view explicitly overrides
+        # it. This prevents clients from injecting an arbitrary role value.
         fields = [
             'username',
             'email',
-            'role',
             'id_number',
             'id_document',
             'password1',
@@ -54,7 +72,19 @@ class RegisterForm(CrimsStyleMixin, UserCreationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Re-add the whitelisted role field after UserCreationForm stripped it.
+        self.fields['role'] = forms.ChoiceField(
+            choices=self.SELF_SERVICE_ROLES,
+            initial='citizen',
+            required=True,
+            help_text=(
+                'Select Officer only if you are registering as law enforcement.'
+            ),
+        )
         self.style_fields()
+
+    def clean_id_document(self):
+        return validate_uploaded_id_document(self.cleaned_data.get('id_document'))
 
 
 class CrimsAuthenticationForm(CrimsStyleMixin, AuthenticationForm):
