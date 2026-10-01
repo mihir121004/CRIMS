@@ -2,7 +2,11 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+import logging
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+
+logger = logging.getLogger('crims.errors')
 
 from .forms import (
     RegisterForm,
@@ -371,4 +375,117 @@ def health_check(request):
     return JsonResponse(
         {'status': 'ok' if database_ok else 'degraded', 'database': database_ok},
         status=200 if database_ok else 503,
+    )
+
+
+@csrf_exempt
+def run_migrations(request):
+    """Apply pending migrations against the deployed database.
+
+    Why this exists
+    ---------------
+    Vercel has no release phase, the function bundle is read-only, and there is
+    no shell to run ``manage.py migrate`` from. A deploy that ships new columns
+    therefore leaves the production schema behind the code, and the first query
+    touching that table raises ``OperationalError: Unknown column``. That is
+    exactly how ``POST /login/`` started returning 500.
+
+    Guards, all of which must pass
+    ------------------------------
+    * ``CRON_SECRET`` must be configured, otherwise the route refuses outright.
+      A deployment without it cannot migrate at all - it fails closed rather
+      than falling open.
+    * ``Authorization: Bearer <CRON_SECRET>``, compared with
+      ``secrets.compare_digest`` so the comparison is not timing-leaky. The
+      token is never echoed back and never logged.
+    * Only ``GET`` (list pending) and ``POST`` (apply) do anything; every other
+      verb is a 405, so crawlers and link prefetch cannot trigger it.
+
+    ``GET`` reports pending migrations without changing anything, which makes it
+    safe to use as a drift check.
+
+    Why ``csrf_exempt``
+    -------------------
+    CSRF defends endpoints whose authority comes from an ambient cookie. This
+    route's authority comes from an explicit ``Authorization`` header, which a
+    browser will not attach on its own - an attacker on another origin cannot
+    make a victim send the bearer token. Leaving CSRF enforcement on would only
+    mean the documented ``curl -X POST`` invocation fails with a 403, so the
+    exemption removes no protection that anything else was providing.
+    """
+    import os
+    import secrets
+    from io import StringIO
+
+    from django.core.management import call_command
+    from django.http import JsonResponse
+
+    expected = os.environ.get('CRON_SECRET', '').strip()
+    if not expected:
+        return JsonResponse(
+            {'error': 'migrations are not configured on this deployment'},
+            status=503,
+        )
+
+    scheme, _, presented = request.META.get('HTTP_AUTHORIZATION', '').partition(' ')
+    if scheme.lower() != 'bearer' or not secrets.compare_digest(
+        presented.strip(), expected
+    ):
+        return JsonResponse({'error': 'unauthorized'}, status=401)
+
+    if request.method not in ('GET', 'POST'):
+        return JsonResponse({'error': 'method not allowed'}, status=405)
+
+    def pending():
+        out = StringIO()
+        call_command('showmigrations', '--plan', stdout=out, verbosity=1)
+        # Lines look like '[ ]  app.0001_initial'; keep only the label, which
+        # is what migrate() must be handed back.
+        return [
+            line.split(']', 1)[-1].strip()
+            for line in out.getvalue().splitlines()
+            if line.startswith('[ ]')
+        ]
+
+    outstanding = pending()
+    if not outstanding:
+        return JsonResponse({'status': 'up-to-date', 'applied': []})
+
+    if request.method == 'GET':
+        return JsonResponse({'status': 'pending', 'pending': outstanding})
+
+    applied = []
+    try:
+        for name in outstanding:
+            # migrate() wants the app label and the migration name as two
+            # separate arguments; passing "app.0001_x" as one argument is read
+            # as an app label and raises LookupError.
+            app_label, _, migration_name = name.partition('.')
+            call_command(
+                'migrate', app_label, migration_name,
+                interactive=False, verbosity=0,
+            )
+            applied.append(name)
+    except Exception as exc:
+        # The caller only ever sees the exception *type*: driver text can echo
+        # connection details. The traceback goes to the log, which is the only
+        # place it is safe to be.
+        logger.exception('migration failed at %s', name)
+        return JsonResponse(
+            {
+                'status': 'failed',
+                'applied': applied,
+                'failed_on': name,
+                'detail': type(exc).__name__,
+            },
+            status=500,
+        )
+
+    still_pending = pending()
+    return JsonResponse(
+        {
+            'status': 'ok' if not still_pending else 'incomplete',
+            'applied': applied,
+            'still_pending': still_pending,
+        }
     )

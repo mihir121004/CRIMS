@@ -190,12 +190,20 @@ class AuthorizationMatrixTests(RoleTestCase):
             'auth_', 'autocomplete_', 'admin_', 'logout', 'password_',
         )
 
+        # Machine endpoints that authenticate by bearer token rather than by
+        # session, so there is no role-based matrix to assert against. The
+        # migration route's access control is covered directly in
+        # accounts/test_auth_flows.py (MigrationRouteTests).
+        token_endpoints = {'run_migrations'}
+
         missing = []
         for name in self.all_url_names():
             plain = name.split('_', 1)[-1] if False else name
             if name in covered:
                 continue
             if name.startswith(admin_prefixes):
+                continue
+            if name in token_endpoints:
                 continue
             if name in covered:
                 continue

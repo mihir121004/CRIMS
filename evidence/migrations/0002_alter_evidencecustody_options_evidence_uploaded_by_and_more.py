@@ -5,6 +5,8 @@ import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
 
+from crims.schema_ops import SplitForeignKeyAddField
+
 
 class Migration(migrations.Migration):
 
@@ -18,7 +20,9 @@ class Migration(migrations.Migration):
             name='evidencecustody',
             options={'ordering': ['-transferred_at']},
         ),
-        migrations.AddField(
+        # SplitForeignKeyAddField, not AddField: the inline-FK form Django uses
+        # on MySQL is rejected by TiDB with error 1072.
+        SplitForeignKeyAddField(
             model_name='evidence',
             name='uploaded_by',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='uploaded_evidence', to=settings.AUTH_USER_MODEL),
