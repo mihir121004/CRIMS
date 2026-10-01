@@ -6,8 +6,16 @@ queue, attach evidence, manage suspects and witnesses, and file FIRs.
 
 - **Stack:** Django 5.2.7 · MySQL/TiDB · Bootstrap 5.3.7 · scikit-learn · Vercel
 - **Tests:** 147 passing
-- **Status:** deployed at `crims-eta.vercel.app`, but **not yet ready for real users** —
-  see [Known blockers](#known-blockers).
+
+### Live deployment
+
+**https://crims-eta.vercel.app**
+
+The public pages (`/`, `/login/`, `/register/`) and `/health/` work. **Registration
+does not** — the mail transport has no valid credentials, so the verification email
+never leaves the server and no account can be completed. See
+[Known blockers](#known-blockers) for the rest, including why the app is not yet ready
+for real users.
 
 ---
 
