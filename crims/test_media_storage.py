@@ -59,6 +59,15 @@ class MediaStorageSettingTests(SimpleTestCase):
         text = (PROJECT_ROOT / 'requirements.txt').read_text()
         self.assertIn('django-storages', text)
 
+    def test_addressing_style_is_path_based(self):
+        """Supabase's S3 endpoint rejects the virtual-host default."""
+        self.assertEqual(settings.AWS_S3_ADDRESSING_STYLE, 'path')
+
+    def test_urls_are_presigned(self):
+        """ID documents and evidence must not sit behind a permanent URL."""
+        self.assertTrue(settings.AWS_QUERYSTRING_AUTH)
+        self.assertIsNone(settings.AWS_DEFAULT_ACL)
+
     def test_s3_credentials_are_forwarded_to_django(self):
         """django-storages reads settings, not the environment."""
         for name in (

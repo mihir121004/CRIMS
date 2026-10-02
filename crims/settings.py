@@ -398,6 +398,15 @@ AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
 AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', '')
 AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'auto')
 AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', '')
+# Supabase's S3 endpoint only speaks path-style addressing. Left as the
+# boto3 default ('auto', which prefers virtual-host) every request fails with
+# an opaque DNS/host error rather than a clear message.
+AWS_S3_ADDRESSING_STYLE = os.environ.get('AWS_S3_ADDRESSING_STYLE', 'path')
+# Buckets hold ID documents and evidence, so they are private and every
+# read goes through a short-lived presigned URL rather than a permanent one.
+AWS_QUERYSTRING_AUTH = os.environ.get(
+    'AWS_QUERYSTRING_AUTH', 'true'
+).lower() in ('1', 'true', 'yes', 'on')
 # R2 and other S3-compatible stores reject the per-object ACL headers that
 # django-storages sends by default, which surfaces as a confusing 400.
 AWS_DEFAULT_ACL = None
