@@ -6,6 +6,7 @@ from django.contrib import messages
 import logging
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.urls import reverse
 from django.utils.crypto import get_random_string
 
 logger = logging.getLogger('crims.errors')
@@ -26,6 +27,7 @@ from .utils import (
     otp_is_valid,
     redact_email,
     send_otp_email,
+    send_invite_email,
 )
 
 
@@ -315,11 +317,26 @@ def admin_invites(request):
                 'administrator invitation issued to %s by %s',
                 redact_email(address), request.user.username,
             )
-            messages.success(
-                request,
-                'Invitation created for {}. They hold no access until you '
-                'approve it below.'.format(address),
+            # Without this the account is unreachable: the invitee has no
+            # password and no code, and cannot register a second time either.
+            mailed = send_invite_email(
+                user, request.build_absolute_uri(
+                    reverse('forgot_password')),
             )
+            if mailed:
+                messages.success(
+                    request,
+                    'Invitation created for {}. They must set their password '
+                    'and verify the address before you can approve them '
+                    'below.'.format(address),
+                )
+            else:
+                messages.warning(
+                    request,
+                    'Invitation created for {}, but the notification email '
+                    'could not be sent. Tell them to use "Forgot password" on '
+                    'the sign-in page to set one.'.format(address),
+                )
             return redirect('admin_invites')
     else:
         form = AdminInviteForm()
@@ -489,6 +506,14 @@ def reset_password(request):
             ):
                 user.set_password(form.cleaned_data['new_password1'])
                 user.clear_otp()
+                # Entering an OTP that was emailed to this address is proof of
+                # control over it - the same proof the registration flow
+                # collects. Without this an invited administrator can never
+                # verify: they cannot sign in to reach /verify-email/ (the
+                # account is unapproved with an unusable password) and they
+                # cannot register as an admin. Their invitation would sit
+                # approvable by nobody forever.
+                user.email_verified = True
                 user.save()
                 request.session.pop('reset_user_id', None)
                 messages.success(request, 'Password updated. Please sign in.')

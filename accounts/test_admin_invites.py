@@ -12,6 +12,8 @@ These tests pin the properties that matter:
   in until both its email is verified and an approver grants it.
 * Approval requires POST + CSRF and is refused for an unverified address.
 """
+import re
+
 from django.contrib.auth import get_user_model
 from django.test import override_settings
 from django.urls import reverse
@@ -342,3 +344,183 @@ class ApproverSettingTests(RoleTestCase):
         from accounts.permissions import is_account_approver
 
         self.assertFalse(is_account_approver(AnonymousUser()))
+
+@override_settings(ADMIN_APPROVER_EMAILS=[APPROVER])
+class InviteeRouteTests(RoleTestCase):
+    """The invitee must be able to reach a verified state at all.
+
+    Regression guard. An invitation used to create the account and send
+    nothing: the invitee had no password, no code, and could not register a
+    second time because the address was taken. ``email_verified`` was therefore
+    permanently False, so ``approve_invite`` refused them forever and the
+    feature could never be completed by anyone.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.approver = User.objects.create_user(
+            username='owner', email=APPROVER, password=PASSWORD,
+            role='admin',
+        )
+        self.approver.is_approved = True
+        self.approver.email_verified = True
+        self.approver.save()
+
+    def invite(self, address):
+        self.login_as(self.approver)
+        return self.client.post(
+            reverse('admin_invites'), {'email': address}
+        )
+
+    @staticmethod
+    def code_from_last_email():
+        from django.core import mail
+
+        body = mail.outbox[-1].body
+        match = re.search(r'\n\n(\d{6})\n\n', body)
+        assert match, 'no OTP found in: {!r}'.format(body)
+        return match.group(1)
+
+    def test_invitation_emails_the_invitee(self):
+        from django.core import mail
+
+        self.invite('newcomer@example.test')
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['newcomer@example.test'])
+
+    def test_the_notification_carries_no_authority(self):
+        """An intercepted email must not be enough to activate the account."""
+        from django.core import mail
+
+        self.invite('newcomer@example.test')
+        invitee = User.objects.get(email='newcomer@example.test')
+
+        self.assertFalse(invitee.email_verified)
+        self.assertFalse(invitee.is_approved)
+        self.assertFalse(invitee.has_usable_password())
+
+    def test_a_mail_outage_does_not_lose_the_invitation(self):
+        from unittest import mock
+
+        with mock.patch(
+            'accounts.views.send_invite_email', return_value=False
+        ):
+            response = self.invite('newcomer@example.test')
+
+        self.assertEqual(response.status_code, 302)
+        invitee = User.objects.get(email='newcomer@example.test')
+        self.assertEqual(invitee.role, 'admin')
+
+    def test_a_mail_outage_warns_the_approver(self):
+        from unittest import mock
+
+        with mock.patch(
+            'accounts.views.send_invite_email', return_value=False
+        ):
+            self.invite('newcomer@example.test')
+
+        response = self.client.get(reverse('admin_invites'))
+        self.assertContains(response, 'could not be sent')
+
+    def test_completing_the_password_reset_verifies_the_address(self):
+        self.invite('newcomer@example.test')
+        self.client.post(
+            reverse('forgot_password'), {'email': 'newcomer@example.test'}
+        )
+        response = self.client.post(
+            reverse('reset_password'),
+            {
+                'otp': self.code_from_last_email(),
+                'new_password1': 'N3wStr0ngPass!234',
+                'new_password2': 'N3wStr0ngPass!234',
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+
+        invitee = User.objects.get(email='newcomer@example.test')
+        self.assertTrue(invitee.email_verified)
+        self.assertTrue(invitee.has_usable_password())
+
+    def test_reset_alone_does_not_approve(self):
+        """Verification is necessary but not sufficient."""
+        self.invite('newcomer@example.test')
+        self.client.post(
+            reverse('forgot_password'), {'email': 'newcomer@example.test'}
+        )
+        self.client.post(
+            reverse('reset_password'),
+            {
+                'otp': self.code_from_last_email(),
+                'new_password1': 'N3wStr0ngPass!234',
+                'new_password2': 'N3wStr0ngPass!234',
+            },
+        )
+
+        invitee = User.objects.get(email='newcomer@example.test')
+        self.assertTrue(invitee.email_verified)
+        self.assertFalse(invitee.is_approved)
+
+        # Still cannot sign in. The session must be dropped first: it is
+        # still the approver's from invite(), which would make this assertion
+        # pass for the wrong reason.
+        self.client.logout()
+        self.client.post(
+            reverse('login'),
+            {'username': invitee.username, 'password': 'N3wStr0ngPass!234'},
+        )
+        self.assertIsNone(self.client.session.get('_auth_user_id'))
+
+    def test_the_whole_loop_completes(self):
+        """invite -> set password -> approve -> sign in."""
+        self.invite('newcomer@example.test')
+
+        # 1. The invitee sets a password, proving control of the address.
+        self.client.post(
+            reverse('forgot_password'), {'email': 'newcomer@example.test'}
+        )
+        self.client.post(
+            reverse('reset_password'),
+            {
+                'otp': self.code_from_last_email(),
+                'new_password1': 'N3wStr0ngPass!234',
+                'new_password2': 'N3wStr0ngPass!234',
+            },
+        )
+
+        # 2. The approver grants the role.
+        invitee = User.objects.get(email='newcomer@example.test')
+        self.login_as(self.approver)
+        self.client.post(reverse('approve_invite', args=[invitee.id]))
+        invitee.refresh_from_db()
+        self.assertTrue(invitee.is_approved)
+
+        # 3. The invitee can now sign in and reach the admin surface.
+        self.assertTrue(
+            self.client.login(
+                username=invitee.username,
+                password='N3wStr0ngPass!234',
+            )
+        )
+        self.assertEqual(
+            self.client.get(reverse('admin_dashboard')).status_code, 200
+        )
+
+    def test_a_bystander_cannot_reset_someone_elses_invitation(self):
+        """The reset code is mailed to the invited address, not the browser."""
+        self.invite('newcomer@example.test')
+        response = self.client.post(
+            reverse('forgot_password'), {'email': 'newcomer@example.test'}
+        )
+        self.assertEqual(response.status_code, 302)
+
+        wrong = self.client.post(
+            reverse('reset_password'),
+            {
+                'otp': '000000',
+                'new_password1': 'N3wStr0ngPass!234',
+                'new_password2': 'N3wStr0ngPass!234',
+            },
+        )
+        self.assertEqual(wrong.status_code, 200)
+        invitee = User.objects.get(email='newcomer@example.test')
+        self.assertFalse(invitee.email_verified)

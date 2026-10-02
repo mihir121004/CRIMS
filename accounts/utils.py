@@ -169,6 +169,45 @@ def send_otp_email(user, purpose=OTP_PURPOSE_VERIFY):
         )
         return False
 
+
+def send_invite_email(user, reset_url):
+    """Notify an invited administrator that an account is waiting for them.
+
+    The message deliberately carries no code and no authority of its own. The
+    invitee sets their password through the ordinary forgot-password flow, which
+    emails them an OTP addressed to the account and so proves they control the
+    mailbox. An attacker who intercepts this notification still cannot activate
+    the account, because completing the flow requires a code only the mailbox
+    can produce.
+    """
+    try:
+        send_mail(
+            subject='You have been invited to administer CRIMS',
+            message=(
+                'Hello {username},\n\n'
+                'An administrator has invited you to join CRIMS as an '
+                'administrator.\n\n'
+                'Set your password here:\n{url}\n\n'
+                'You will be emailed a one-time code to confirm the address '
+                'belongs to you. After that an administrator must approve '
+                'your account before you can sign in.\n'
+            ).format(username=user.username, url=reset_url),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+        logger.info(
+            'invitation email to %s accepted by the mail provider',
+            _redact(user.email),
+        )
+        return True
+    except Exception as exc:
+        logger.error(
+            'invitation email to %s failed: %s', _redact(user.email),
+            _describe_mail_error(exc),
+        )
+        return False
+
 def admin_required(view_func=None):
     """Allow access only to users with role 'admin'.
 
