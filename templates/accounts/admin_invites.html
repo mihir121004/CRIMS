@@ -1,0 +1,131 @@
+{% extends 'base.html' %} {% block content %}
+
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold">Administrator Invitations</h2>
+    <span class="badge bg-warning fs-6">{{ pending_invites|length }} Pending</span>
+  </div>
+
+  {% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% comment %}
+  Administrators cannot be self-registered: RegisterForm deliberately omits the
+  role field, because letting the POST body choose it was a privilege-escalation
+  bug in this project. The only route in is this invitation, which requires
+  both role='admin' and an address listed in settings.ADMIN_APPROVER_EMAILS.
+  An invitation grants nothing on its own - it creates the account
+  unapproved, with no usable password, so the invitee must verify their
+  address, set a password, and be approved here before signing in.
+  {% endcomment %}
+
+  <div class="card mb-4">
+    <div class="card-header">
+      <i class="bi bi-person-plus me-2"></i>Invite an administrator
+    </div>
+    <div class="card-body">
+      {% if form.non_field_errors %}
+      {% for error in form.non_field_errors %}
+      <div class="alert alert-danger">{{ error }}</div>
+      {% endfor %}
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="row g-3 align-items-end">
+          <div class="col-md-7">
+            <label class="form-label" for="{{ form.email.id_for_label }}">
+              Email address
+            </label>
+            {{ form.email }}
+            <div class="form-text">{{ form.email.help_text }}</div>
+            {% for error in form.email.errors %}
+            <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+          </div>
+          <div class="col-md-5">
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="bi bi-send me-1"></i> Create invitation
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <h3 class="fw-semibold mb-3">Pending invitations</h3>
+
+  {% if pending_invites %}
+  <div class="table-responsive">
+    <table class="table dash-table">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Email</th>
+          <th>Email verified</th>
+          <th>Created</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for invite in pending_invites %}
+        <tr>
+          <td class="fw-semibold">{{ invite.username }}</td>
+          <td>{{ invite.email }}</td>
+          <td>
+            {% if invite.email_verified %}
+            <span class="badge bg-success">Verified</span>
+            {% else %}
+            <span class="badge bg-secondary">Not yet</span>
+            {% endif %}
+          </td>
+          <td>{{ invite.date_joined|date:"d M Y H:i" }}</td>
+          <td class="text-end">
+            {% comment %}
+            POST + CSRF, approver-only. These were GET links with an inline
+            onclick confirm in the officer queue, which is what let anyone
+            approve or permanently destroy an account.
+            {% endcomment %}
+            <form method="post" action="{% url 'approve_invite' invite.id %}"
+                  class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-success"
+                      {% if not invite.email_verified %}disabled{% endif %}
+                      title="{% if invite.email_verified %}Grant administrator access{% else %}Waiting on email verification{% endif %}">
+                <i class="bi bi-check-lg"></i> Approve
+              </button>
+            </form>
+            <form method="post" action="{% url 'reject_invite' invite.id %}"
+                  class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-danger"
+                      onclick="return confirm('Reject the invitation for {{ invite.email }}? This deactivates the account.')">
+                <i class="bi bi-x-lg"></i> Reject
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="text-muted small">
+      An invitation cannot be approved until the address has completed email
+      verification.
+    </p>
+  </div>
+  {% else %}
+  <div class="text-center py-5">
+    <i class="bi bi-check-circle-fill fs-1 text-success"></i>
+    <h3 class="mt-3">No pending invitations</h3>
+    <p class="text-muted">No administrator invitations are awaiting approval.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

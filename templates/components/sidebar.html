@@ -133,6 +133,34 @@
 
         {% endif %}
 
+        {% comment %}
+        Administration links are shown to match the view guards exactly, so a
+        citizen never sees a link that would return a 403. "Admin Invitations"
+        additionally requires an address in settings.ADMIN_APPROVER_EMAILS,
+        which is stricter than merely being an admin.
+        {% endcomment %}
+        {% if request.user.role == 'admin' %}
+
+        <li class="menu-label">Administration</li>
+
+        <li>
+            <a href="{% url 'pending_officers' %}" class="{% if request.resolver_match.url_name == 'pending_officers' %}active{% endif %}">
+                <span class="menu-icon"><i class="bi bi-person-check-fill"></i></span>
+                <span>Pending Officers</span>
+            </a>
+        </li>
+
+        {% if is_account_approver %}
+        <li>
+            <a href="{% url 'admin_invites' %}" class="{% if request.resolver_match.url_name == 'admin_invites' %}active{% endif %}">
+                <span class="menu-icon"><i class="bi bi-person-plus-fill"></i></span>
+                <span>Admin Invitations</span>
+            </a>
+        </li>
+        {% endif %}
+
+        {% endif %}
+
     </ul>
 
     <div class="sidebar-footer">

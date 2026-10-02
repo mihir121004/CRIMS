@@ -128,3 +128,50 @@ class ResetPasswordForm(CrimsStyleMixin, forms.Form):
                 'The two password fields did not match.'
             )
         return cleaned_data
+
+
+class AdminInviteForm(CrimsStyleMixin, forms.Form):
+    """Invite someone to hold the ``admin`` role.
+
+    Administrators cannot be self-registered - ``RegisterForm`` deliberately
+    omits the role for exactly that reason. So the only path in is an
+    invitation issued by a designated approver, which then creates the account
+    *unapproved*. The invitee still has to verify their address and set a
+    password before they can sign in.
+    """
+
+    email = forms.EmailField(
+        max_length=254,
+        help_text=(
+            'They will hold no access until this address is approved. '
+            'They sign in with a username they choose after verifying '
+            'their email address.'
+        ),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.style_fields()
+        self.fields['email'].widget.attrs['placeholder'] = (
+            'Enter the address to invite'
+        )
+
+    def clean_email(self):
+        address = self.cleaned_data['email'].strip().lower()
+        existing = User.objects.filter(email__iexact=address).first()
+        if existing is None:
+            return address
+
+        if existing.role == 'admin' and existing.is_approved:
+            raise forms.ValidationError(
+                'That address already belongs to an active administrator.'
+            )
+        if existing.role == 'admin':
+            raise forms.ValidationError(
+                'That address already has a pending administrator invitation.'
+            )
+        # An existing citizen/officer account is upgraded in place rather than
+        # duplicated: two rows for one address would split that person's
+        # complaint history in half.
+        self.existing_user = existing
+        return address

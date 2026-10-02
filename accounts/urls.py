@@ -13,6 +13,9 @@ from .views import (
     pending_officers,
     approve_officer,
     reject_officer,
+    admin_invites,
+    approve_invite,
+    reject_invite,
 )
 
 urlpatterns = [
@@ -29,4 +32,11 @@ urlpatterns = [
     path('pending-officers/', pending_officers, name='pending_officers'),
     path('approve-officer/<int:user_id>/', approve_officer, name='approve_officer'),
     path('reject-officer/<int:user_id>/', reject_officer, name='reject_officer'),
+    # Administrator invitations. Restricted to the addresses in
+    # settings.ADMIN_APPROVER_EMAILS by accounts.permissions.approver_required.
+    path('admin-invites/', admin_invites, name='admin_invites'),
+    path('admin-invites/approve/<int:user_id>/', approve_invite,
+         name='approve_invite'),
+    path('admin-invites/reject/<int:user_id>/', reject_invite,
+         name='reject_invite'),
 ]

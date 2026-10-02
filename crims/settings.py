@@ -122,12 +122,33 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'notifications.context_processors.notification_count',
+                'accounts.context_processors.approver_context',
             ],
         },
     },
 ]
 
 WSGI_APPLICATION = 'crims.wsgi.application'
+
+# ---------------------------------------------------------------------------
+# Administrator invitations
+# ---------------------------------------------------------------------------
+# Only these accounts may invite administrators or approve admin accounts.
+#
+# The role check alone is deliberately NOT enough: `role='admin'` is a value
+# in a database column, and relying on "whoever is an admin" would make the
+# set of people who can mint further admins implicit and invisible. Naming the
+# addresses makes it reviewable and rotatable without a code change.
+#
+# Bootstrap caveat: an approver must already hold `role='admin'`. If none of
+# these addresses does yet, the first one has to be created out of band.
+ADMIN_APPROVER_EMAILS = [
+    address.strip().lower()
+    for address in os.environ.get(
+        'ADMIN_APPROVER_EMAILS', 'solankimihir1210@gmail.com'
+    ).split(',')
+    if address.strip()
+]
 
 
 # Database

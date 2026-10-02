@@ -1,10 +1,12 @@
 from django.shortcuts import render, redirect
+from django.conf import settings
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 import logging
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.utils.crypto import get_random_string
 
 logger = logging.getLogger('crims.errors')
 
@@ -16,14 +18,26 @@ from .forms import (
     ResetPasswordForm,
 )
 from .models import User
-from .permissions import admin_required
+from .permissions import admin_required, approver_required
 from .utils import (
     OTP_PURPOSE_RESET,
     OTP_PURPOSE_VERIFY,
     generate_otp,
     otp_is_valid,
+    redact_email,
     send_otp_email,
 )
+
+
+def _pending_admin_username():
+    """A placeholder username for an invited administrator.
+
+    ``UserManager.make_random_username()`` was removed in Django 5.1, so this
+    derives one from a cryptographic random string instead. Collision is
+    irrelevant either way because the invitee's real username is set when they
+    complete verification.
+    """
+    return 'invite_{}'.format(get_random_string(12, allowed_chars='abcdefghijklmnopqrstuvwxyz0123456789'))
 
 
 def home(request):
@@ -104,14 +118,16 @@ def register_view(request):
             user.clear_otp()
             user.save()
 
-            if user.role == 'officer' and not user.is_approved:
+            if not user.is_approved:
                 return render(
                     request,
                     'accounts/registration_pending.html',
                     {
-                        'message': 'Your registration as officer is pending '
-                                   'admin approval. You will be notified once '
-                                   'approved.'
+                        'message': 'Your registration as {0} is pending '
+                                   'approval by a designated approver. You '
+                                   'will be able to sign in once it is '
+                                   'granted.'.format(
+                                       user.get_role_display()),
                     },
                 )
             login(request, user)
@@ -151,9 +167,15 @@ def login_view(request):
                 )
                 return redirect('verify_email')
 
-            if user.role == 'officer' and not user.is_approved:
+            # Any role with is_approved=False is held back, not just officers.
+            # An invited administrator is unapproved by construction, and this
+            # is the only thing standing between "invited" and "signed in as
+            # admin" - so it must not be narrowed to one role.
+            if not user.is_approved:
                 form.add_error(
-                    None, 'Your officer account is pending admin approval.'
+                    None,
+                    'Your {0} account is pending approval by a designated '
+                    'approver.'.format(user.get_role_display().lower()),
                 )
             else:
                 login(request, user)
@@ -245,6 +267,130 @@ def reject_officer(request, user_id):
     else:
         messages.error(request, 'That officer could not be found.')
     return redirect('pending_officers')
+
+
+# ---------------------------------------------------------------------------
+# Administrator invitations
+# ---------------------------------------------------------------------------
+# `admin` is intentionally absent from RegisterForm.SELF_SERVICE_ROLES: letting
+# a POST body choose the role is the privilege-escalation bug this project
+# already fixed once. The only way in is an invitation from a designated
+# approver, and the invitee still lands as `is_approved=False`, so nothing is
+# granted at invite time. Approval is a separate, explicit act.
+
+def _admin_invite(user):
+    """Pending administrator invitations, excluding the approver's own row."""
+    return User.objects.filter(role='admin', is_approved=False).exclude(
+        email__in=settings.ADMIN_APPROVER_EMAILS
+    )
+
+
+@approver_required
+def admin_invites(request):
+    """Issue and review administrator invitations.
+
+    Restricted by ``approver_required``, which requires both ``role='admin'``
+    and an address listed in ``settings.ADMIN_APPROVER_EMAILS``. A plain
+    admin who is not an approver gets a 403.
+    """
+    from accounts.forms import AdminInviteForm
+
+    if request.method == 'POST':
+        form = AdminInviteForm(request.POST)
+        if form.is_valid():
+            address = form.cleaned_data['email']
+            user = getattr(form, 'existing_user', None) or User(
+                username=_pending_admin_username(),
+                email=address,
+            )
+            user.role = 'admin'
+            # No password is set, so the account cannot be signed into even if
+            # the address were somehow verified without the owner's say-so.
+            # They set one via the password-reset flow after verifying.
+            user.is_approved = False
+            user.is_active = True
+            user.set_unusable_password()
+            user.save()
+            logger.warning(
+                'administrator invitation issued to %s by %s',
+                redact_email(address), request.user.username,
+            )
+            messages.success(
+                request,
+                'Invitation created for {}. They hold no access until you '
+                'approve it below.'.format(address),
+            )
+            return redirect('admin_invites')
+    else:
+        form = AdminInviteForm()
+
+    return render(
+        request,
+        'accounts/admin_invites.html',
+        {
+            'form': form,
+            'pending_invites': _admin_invite(request.user),
+        },
+    )
+
+
+@approver_required
+@require_POST
+def approve_invite(request, user_id):
+    """Approve an administrator invitation.
+
+    ``is_approved`` alone only unlocks sign-in. It is deliberately *not* an
+    escalation to ``is_superuser``: Django's own admin site keys off that
+    flag, and this project's admin role does not need it.
+    """
+    user = User.objects.filter(
+        id=user_id, role='admin', is_approved=False
+    ).first()
+    if user is None:
+        messages.error(request, 'That invitation could not be found.')
+    elif not user.email_verified:
+        messages.error(
+            request,
+            'That address has not completed email verification yet, so '
+            'approving it would grant access to an unproven address. Ask '
+            'them to finish verifying first.',
+        )
+    else:
+        user.is_approved = True
+        user.save(update_fields=['is_approved'])
+        logger.warning(
+            'administrator invitation approved for %s by %s',
+            redact_email(user.email), request.user.username,
+        )
+        messages.success(
+            request, 'Administrator {} has been approved.'.format(user.username)
+        )
+    return redirect('admin_invites')
+
+
+@approver_required
+@require_POST
+def reject_invite(request, user_id):
+    """Decline an invitation. The row is deactivated, never deleted, so any
+    complaint history or audit entries keep a valid foreign key."""
+    user = User.objects.filter(
+        id=user_id, role='admin', is_approved=False
+    ).first()
+    if user:
+        username = user.username
+        user.is_active = False
+        user.is_approved = False
+        user.save(update_fields=['is_active', 'is_approved'])
+        logger.warning(
+            'administrator invitation rejected for %s by %s',
+            redact_email(user.email), request.user.username,
+        )
+        messages.success(
+            request, 'Invitation for {} has been rejected.'.format(username)
+        )
+    else:
+        messages.error(request, 'That invitation could not be found.')
+    return redirect('admin_invites')
 
 
 def verify_email(request):

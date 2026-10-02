@@ -50,6 +50,10 @@ def _redact(email):
     return '{}***@{}'.format(local[:2], domain)
 
 
+#: Public alias. The admin-invitation views log addresses too.
+redact_email = _redact
+
+
 def _describe_mail_error(exc):
     """Summarise a mail failure without echoing credentials.
 

@@ -26,6 +26,7 @@ admin   - full access, including officer approval and system analytics
 from functools import wraps
 
 from django.contrib.auth.views import redirect_to_login
+from django.conf import settings
 from django.core.exceptions import PermissionDenied
 
 #: Roles considered "law-enforcement staff" (i.e. not a member of the public).
@@ -78,6 +79,48 @@ def is_admin(user):
     return bool(
         user.is_authenticated and getattr(user, 'role', None) in ADMIN_ROLES
     )
+
+
+def is_account_approver(user):
+    """True for the specific accounts allowed to mint administrators.
+
+    Two conditions, both required:
+
+    * ``role == 'admin'`` - so an ordinary citizen, or even a logged-in
+      officer, can never reach the invitation surface.
+    * the address is listed in ``settings.ADMIN_APPROVER_EMAILS`` - so the set
+      of approvers is explicit and reviewable rather than "every admin".
+
+    The comparison is case-insensitive because ``AbstractUser`` does not
+    normalise ``email``.
+    """
+    if not is_admin(user):
+        return False
+    configured = getattr(settings, 'ADMIN_APPROVER_EMAILS', ())
+    address = (user.email or '').strip().lower()
+    return bool(address) and address in {
+        str(entry).strip().lower() for entry in configured
+    }
+
+
+def approver_required(view_func):
+    """Allow only designated approvers; 403 for everyone else.
+
+    Deliberately stricter than ``admin_required``: an admin who is not on the
+    approver list gets a 403 rather than a quiet invitation form.
+    """
+
+    @wraps(view_func)
+    def _wrapped(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path())
+        if not is_account_approver(request.user):
+            raise PermissionDenied(
+                'Only a designated account approver may do this.'
+            )
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped
 
 
 # ---------------------------------------------------------------------------

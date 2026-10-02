@@ -32,6 +32,11 @@ MATRIX = [
     ('dashboard',                 302, 302, 302, 302),  # redirects by role
     # --- officer approval (admin only) ---
     ('pending_officers',          302, 403, 403, 200),
+    # --- administrator invitations (approver only) ---
+    # The admin column is 403 on purpose: this fixture's admin is *not* an
+    # approver, so role='admin' alone is provably insufficient. The approver
+    # path is asserted in accounts/test_admin_invites.py.
+    ('admin_invites',             302, 403, 403, 403),
     # --- complaints ---
     ('create_complaint',          302, 200, 200, 200),
     ('my_complaints',             302, 200, 200, 200),
@@ -63,6 +68,7 @@ ACTION_ONLY_NAMES = {
     'approve_officer', 'reject_officer', 'clear_suspect', 'toggle_wanted',
     'toggle_protection', 'add_note', 'mark_read', 'transfer_evidence',
     'evidence_detail',
+    'approve_invite', 'reject_invite',
 }
 
 # Detail / action URLs need object ids, checked separately below.
