@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
+from django.utils.module_loading import import_string
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -390,8 +391,38 @@ STORAGES = {
     },
 }
 
+# django-storages reads these from Django settings, not from os.environ, so
+# they have to be forwarded explicitly for an S3-compatible store to work.
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', '')
+AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'auto')
+AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', '')
+# R2 and other S3-compatible stores reject the per-object ACL headers that
+# django-storages sends by default, which surfaces as a confusing 400.
+AWS_DEFAULT_ACL = None
+
 if os.environ.get('MEDIA_STORAGE'):
-    STORAGES['default'] = {'BACKEND': os.environ['MEDIA_STORAGE']}
+    STORAGES['default'] = {
+        'BACKEND': os.environ['MEDIA_STORAGE'],
+        'OPTIONS': {
+            'endpoint_url': AWS_S3_ENDPOINT_URL,
+            'default_acl': None,
+        },
+    }
+    # A storage backend that fails to import takes down every request, so the
+    # deployment is verified to import before it is trusted.
+    from django.core.exceptions import ImproperlyConfigured
+
+    try:
+        import_string(os.environ['MEDIA_STORAGE'])
+    except (ImportError, AttributeError) as exc:
+        raise ImproperlyConfigured(
+            'MEDIA_STORAGE={!r} could not be loaded: {}. Add the package that '
+            'provides it to requirements.txt.'.format(
+                os.environ['MEDIA_STORAGE'], exc,
+            )
+        )
 
 
 # ---------------------------------------------------------------------------
