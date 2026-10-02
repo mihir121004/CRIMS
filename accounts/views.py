@@ -635,3 +635,107 @@ def run_migrations(request):
             'still_pending': still_pending,
         }
     )
+
+
+@csrf_exempt
+def bootstrap_approver(request):
+    """Make a configured approver address a usable administrator.
+
+    Why this exists
+    ---------------
+    ``ADMIN_APPROVER_EMAILS`` is the only way to grant the admin role, so the
+    person named in it cannot bootstrap themselves: they would need to already be
+    an active admin to reach the invitation screen. Production cannot be edited
+    by hand either - ``DATABASE_URL`` is a write-only Vercel secret, so there is
+    no local ``createsuperuser`` path. This closes that loop, using the same
+    ``CRON_SECRET`` gate as the migration route so no new secret is introduced.
+
+    The authority here is deliberately bounded
+    ------------------------------------------
+    A valid ``CRON_SECRET`` is *not* on its own enough to mint an administrator.
+    The requested address must also appear in ``ADMIN_APPROVER_EMAILS``, so this
+    route can only ever restore the addresses the operator already configured. A
+    leaked ``CRON_SECRET`` therefore cannot be used to promote an arbitrary
+    account, and the endpoint has no way to grant ``is_superuser``.
+
+    Passwords
+    ---------
+    If the account has no usable password, one is generated server-side and
+    returned exactly once in the response, so no password has to be typed on a
+    command line where it would land in shell history. Callers should capture
+    that value; it is not recoverable afterwards.
+    """
+    import os
+    import secrets
+
+    from django.http import JsonResponse
+    from django.utils.crypto import get_random_string
+
+    expected = os.environ.get('CRON_SECRET', '').strip()
+    if not expected:
+        return JsonResponse(
+            {'error': 'bootstrap is not configured on this deployment'},
+            status=503,
+        )
+
+    scheme, _, presented = request.META.get('HTTP_AUTHORIZATION', '').partition(' ')
+    if scheme.lower() != 'bearer' or not secrets.compare_digest(
+        presented.strip(), expected
+    ):
+        return JsonResponse({'error': 'unauthorized'},status=401)
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'method not allowed'}, status=405)
+
+    address = (request.POST.get('email') or '').strip().lower()
+    allowed = [
+        a.strip().lower() for a in getattr(settings, 'ADMIN_APPROVER_EMAILS', []) if a.strip()
+    ]
+    if not address:
+        return JsonResponse({'error': 'email is required'}, status=400)
+    if address not in allowed:
+        # Deliberately does not echo which addresses are configured.
+        return JsonResponse(
+            {'error': 'that address is not a configured approver'}, status=403,
+        )
+
+    user = User.objects.filter(email__iexact=address).first()
+    created = user is None
+    if user is None:
+        user = User(username='admin_{}'.format(address.split('@')[0][:20]))
+        user.email = address
+        user.role = 'admin'
+        user.set_unusable_password()
+        user.save()
+
+    user.role = 'admin'
+    user.is_active = True
+    user.is_approved = True
+    # Proven ownership of the mailbox is established by the operator holding
+    # CRON_SECRET, not by a verification mail that may never be deliverable.
+    user.email_verified = True
+    # Never grant these: they open Django's own admin site, which this project
+    # does not use and does not audit.
+    user.is_staff = False
+    user.is_superuser = False
+
+    generated = None
+    if not user.has_usable_password():
+        generated = get_random_string(20)
+        user.set_password(generated)
+
+    user.save()
+    logger.warning(
+        'approver %s by bootstrap (created=%s)', redact_email(address), created,
+    )
+
+    payload = {
+        'status': 'ok',
+        'created': created,
+        'username': user.username,
+        'role': user.role,
+        'is_approved': user.is_approved,
+    }
+    if generated:
+        payload['generated_password'] = generated
+    return JsonResponse(payload)

@@ -190,24 +190,28 @@ class AuthorizationMatrixTests(RoleTestCase):
         covered |= {'login', 'logout', 'register', 'home', 'dashboard',
                     'verify_email', 'reset_password'}
 
-        # Django admin internals and the built-in password-reset views are
-        # not part of the CRIMS surface under test.
-        admin_prefixes = (
-            'auth_', 'autocomplete_', 'admin_', 'logout', 'password_',
-        )
+        # Names that legitimately have no role-based row. Spelled out rather
+        # than matched by prefix: a prefix rule such as 'admin_' silently
+        # exempts every future admin_* view from this guard, which is how
+        # admin_invites could have shipped with no coverage row at all.
+        name_exemptions = {
+            # Session endpoints, exercised directly in accounts/test_auth_flows.py.
+            'logout',
+        }
 
         # Machine endpoints that authenticate by bearer token rather than by
         # session, so there is no role-based matrix to assert against. The
         # migration route's access control is covered directly in
-        # accounts/test_auth_flows.py (MigrationRouteTests).
-        token_endpoints = {'run_migrations'}
+        # accounts/test_auth_flows.py (MigrationRouteTests), and the bootstrap
+        # route's in accounts/test_bootstrap_approver.py.
+        token_endpoints = {'run_migrations', 'bootstrap_approver'}
 
         missing = []
         for name in self.all_url_names():
             plain = name.split('_', 1)[-1] if False else name
             if name in covered:
                 continue
-            if name.startswith(admin_prefixes):
+            if name in name_exemptions:
                 continue
             if name in token_endpoints:
                 continue

@@ -2,7 +2,8 @@ from django.urls import path
 from .views import (
     home,
     health_check,
-    run_migrations,
+run_migrations,
+    bootstrap_approver,
     register_view,
     login_view,
     logout_view,
@@ -21,6 +22,8 @@ from .views import (
 urlpatterns = [
     path('health/', health_check, name='health_check'),
     path('internal/migrate/', run_migrations, name='run_migrations'),
+    path('internal/bootstrap-approver/', bootstrap_approver,
+         name='bootstrap_approver'),
     path('', home, name='home'),
     path('register/', register_view, name='register'),
     path('login/', login_view, name='login'),
