@@ -35,20 +35,37 @@ def upload_evidence(request, complaint_id):
     if request.method == 'POST':
         form = EvidenceForm(request.POST, request.FILES)
         if form.is_valid():
-            with _atomic_guard():
-                evidence = form.save(commit=False)
-                evidence.complaint = complaint
-                evidence.uploaded_by = request.user
-                evidence.save()
+            try:
+                with _atomic_guard():
+                    evidence = form.save(commit=False)
+                    evidence.complaint = complaint
+                    evidence.uploaded_by = request.user
+                    evidence.save()
+            except OSError:
+                # MEDIA_ROOT sits on Vercel's read-only bundle until
+                # MEDIA_STORAGE points at an object store, so the write inside
+                # the save raises. The transaction rolls back, so no evidence
+                # row is left behind pointing at a file that was never stored.
+                import logging
 
-            ActivityLog.objects.create(
-                user=request.user,
-                action='Evidence uploaded for {}'.format(
-                    complaint.tracking_id
-                ),
-            )
-            messages.success(request, 'Evidence uploaded.')
-            return redirect('complaint_detail', pk=complaint.id)
+                logging.getLogger('crims.errors').exception(
+                    'evidence storage failure for complaint %s',
+                    complaint.tracking_id,
+                )
+                form.add_error(
+                    'file',
+                    'We could not store that file. Please try again later, '
+                    'or contact the administrator.',
+                )
+            else:
+                ActivityLog.objects.create(
+                    user=request.user,
+                    action='Evidence uploaded for {}'.format(
+                        complaint.tracking_id
+                    ),
+                )
+                messages.success(request, 'Evidence uploaded.')
+                return redirect('complaint_detail', pk=complaint.id)
     else:
         form = EvidenceForm()
 

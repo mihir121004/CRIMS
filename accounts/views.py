@@ -39,7 +39,31 @@ def _pending_admin_username():
     irrelevant either way because the invitee's real username is set when they
     complete verification.
     """
-    return 'invite_{}'.format(get_random_string(12, allowed_chars='abcdefghijklmnopqrstuvwxyz0123456789'))
+    return 'invite_{}'.format(get_random_string(
+        12, allowed_chars='abcdefghijklmnopqrstuvwxyz0123456789'))
+
+
+def _save_registration(user, form):
+    """Persist a new registration, turning a storage failure into a form error.
+
+    ``MEDIA_ROOT`` resolves inside the deployed bundle, which Vercel mounts
+    read-only, so an officer's ID-document upload raises ``OSError`` during
+    save. That surfaced as an unhandled traceback and a bare 500 page. Nothing
+    is written before the failure, so no orphaned account is left behind.
+    """
+    try:
+        user.save()
+        return True
+    except OSError:
+        logger.exception(
+            'registration storage failure for %s', redact_email(user.email),
+        )
+        form.add_error(
+            'id_document',
+            'We could not store your document. Please try again later, or '
+            'contact the administrator.',
+        )
+        return False
 
 
 def home(request):
@@ -93,7 +117,12 @@ def register_view(request):
             if settings.EMAIL_VERIFICATION_REQUIRED:
                 code = generate_otp()
                 user.set_otp(code, OTP_PURPOSE_VERIFY)
-                user.save()
+                if not _save_registration(user, form):
+                    return render(
+                        request,
+                        'accounts/register.html',
+                        {'form': form, 'stats': get_auth_stats()},
+                    )
                 request.session['verify_user_id'] = user.id
                 # A mail outage must not abort registration (this raised an
                 # unhandled HTTPError and 500'd the whole signup flow).
@@ -118,7 +147,12 @@ def register_view(request):
 
             user.email_verified = True
             user.clear_otp()
-            user.save()
+            if not _save_registration(user, form):
+                return render(
+                    request,
+                    'accounts/register.html',
+                    {'form': form, 'stats': get_auth_stats()},
+                )
 
             if not user.is_approved:
                 return render(

@@ -10,12 +10,15 @@ production registration return HTTP 500).
 """
 
 import os
+import tempfile
 from contextlib import contextmanager
 from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.core import mail
-from django.test import TestCase, override_settings
+from django.test import (
+    TestCase, TransactionTestCase, override_settings,
+)
 from django.urls import reverse
 
 from accounts.utils import OTP_PURPOSE_RESET, OTP_PURPOSE_VERIFY
@@ -607,3 +610,76 @@ class MigrationRouteTests(TestCase):
         args, kwargs = calls[0]
         self.assertEqual(args, ('accounts', '0002_alter_user_options'))
         self.assertIs(kwargs['interactive'], False)
+
+
+@override_settings(EMAIL_VERIFICATION_REQUIRED=True)
+class UnwritableMediaTests(TransactionTestCase):
+    # TransactionTestCase, not TestCase: a failing save breaks the surrounding
+    # atomic block, and TestCase's own wrapper would then poison every
+    # assertion in the test with TransactionManagementError.
+    """MEDIA_ROOT is read-only in the deployed function bundle.
+
+    Regression guard for a production 500: registering as an officer attaches
+    an ID document, and saving it wrote to ``/var/task/media``, which Vercel
+    mounts read-only. The response was a bare traceback page.
+    """
+
+    def register_officer(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        return self.client.post(
+            reverse('register'),
+            {
+                'username': 'newofficer',
+                'email': 'new@test.local',
+                'role': 'officer',
+                'id_number': 'ID-99',
+                'password1': PASSWORD,
+                'password2': PASSWORD,
+                'id_document': SimpleUploadedFile(
+                    'id.pdf', b'%PDF-1.4 fake', content_type='application/pdf',
+                ),
+            },
+        )
+
+    def test_storage_failure_is_a_form_error_not_a_500(self):
+        with mock.patch(
+            'django.core.files.storage.base.Storage.save',
+            side_effect=OSError(30, 'Read-only file system'),
+        ):
+            response = self.register_officer()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'could not store your document')
+
+    def test_storage_failure_leaves_no_orphaned_account(self):
+        """The insert must not survive, or the username is taken forever."""
+        with mock.patch(
+            'django.core.files.storage.base.Storage.save',
+            side_effect=OSError(30, 'Read-only file system'),
+        ):
+            self.register_officer()
+
+        self.assertFalse(
+            User.objects.filter(username='newofficer').exists()
+        )
+
+    def test_storage_failure_sends_no_email(self):
+        with mock.patch(
+            'django.core.files.storage.base.Storage.save',
+            side_effect=OSError(30, 'Read-only file system'),
+        ):
+            self.register_officer()
+
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_the_upload_succeeds_when_storage_works(self):
+        """Guards against the handler swallowing every registration."""
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.settings(MEDIA_ROOT=tmp):
+                response = self.register_officer()
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            User.objects.filter(username='newofficer').exists()
+        )
